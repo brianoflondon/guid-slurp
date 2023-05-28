@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "guid-slurp"
+version = "0.1.0"
+description = "Slurping up GUIDs from Hive"
+authors = ["Brian <brian@v4v.app>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "guid_slurp"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+tqdm = "^4.65.0"
+httpx = "^0.24.1"
+pymongo = "^4.3.3"
+pytz = "^2023.3"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
