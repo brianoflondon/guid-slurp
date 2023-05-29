@@ -81,6 +81,7 @@ services:
       - ".env"
     ports:
       # - "${LOCAL_TAILSCALE_IP}:27017:27017"
+      27027:27017
       - "127.0.1.1:27018:27017"
       - "127.0.0.1:27018:27017"
     # command: mongod --bind_ip localhost,${LOCAL_TAILSCALE_NAME} --replSet v4vapp-repl
