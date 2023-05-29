@@ -79,7 +79,7 @@ http:
         - "websecure"
       rule: Host(`{{env "EXTERNAL_API_DOMAIN"}}`)
       tls:
-        certresolver: staging
+        certresolver: production
       service: guid-resolver
 
 
