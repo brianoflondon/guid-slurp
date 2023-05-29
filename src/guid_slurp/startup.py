@@ -206,40 +206,63 @@ def create_indexes(client: MongoClient):
     index_name = "url"
     collection.create_index([(index_key, 1)], name=index_name)
 
+    # Create an index
+    index_key = "podcastIndexId"
+    index_name = "podcastIndexId"
+    collection.create_index([(index_key, 1)], name=index_name)
+
 
 def create_database():
     global COUNT_LINES
-    # Connect to MongoDB
-    with MongoClient(MONGODB_CONNECTION) as client:
-        db = client[MONGODB_DATABASE]
+    with sqlite3.connect(UNTAR_PATH) as conn:
+        c = conn.cursor()
 
-        # Access the collection
-        collection = db[MONGODB_COLLECTION]
+        # Execute the query to count the rows in the table
+        c.execute("SELECT COUNT(*) FROM podcasts")
 
-        if COUNT_LINES == collection.count_documents({}):
-            print("Database already created")
-            return
+        # Fetch the result and store it in a variable
+        COUNT_LINES = c.fetchone()[0]
 
-        # Delete all data in the collection
-        collection.drop()
+        # Print the count
+        print("Number of rows:", COUNT_LINES)
 
-        # Path to the CSV file
-        csv_file_path = os.path.join(DIRECTORY, "podcasts.csv")
+        # Execute the query to select the fields from the table
+        c.execute(
+            "SELECT podcastGuid, url, originalUrl, id as podcastIndexId, itunesId FROM podcasts"
+        )
 
-        # Chunk size for batch insert
-        chunk_size = 10000
+        # Connect to MongoDB
+        with MongoClient(MONGODB_CONNECTION) as client:
+            db = client[MONGODB_DATABASE]
 
-        # Read the CSV file and insert data in chunks
-        data = []
-        timestamp = datetime.now(timezone.utc)
+            # Access the collection
+            collection = db[MONGODB_COLLECTION]
 
-        with open(csv_file_path, "r") as file:
-            csv_data = csv.DictReader(file)
-            for row in tqdm(
-                csv_data, desc="Inserting Data", total=COUNT_LINES, unit="rows"
-            ):
-                row["timestamp"] = timestamp
-                data.append(dict(row))
+            if COUNT_LINES == collection.count_documents({}):
+                print("Database already created")
+                # return
+
+            # Delete all data in the collection
+            collection.drop()
+
+            # Chunk size for batch insert
+            chunk_size = 1000
+
+            # Read the CSV file and insert data in chunks
+            data = []
+            timestamp = datetime.now(timezone.utc)
+
+            for row in tqdm(c, desc="Inserting Data", total=COUNT_LINES, unit="rows"):
+                data_item = {
+                    "podcastGuid": row[0],
+                    "url": row[1],
+                    "originalUrl": row[2],
+                    "podcastIndexId": row[3],
+                    "itunesId": row[4],
+                    "timestamp": timestamp,
+                }
+
+                data.append(data_item)
 
                 # Insert data in chunks
                 if len(data) == chunk_size:
@@ -252,8 +275,8 @@ def create_database():
                 collection = db[MONGODB_COLLECTION]
                 collection.insert_many(data)
 
-        # Create indexes
-        create_indexes(client)
+            # Create indexes
+            create_indexes(client)
 
 
 def is_running_in_docker() -> bool:
@@ -279,7 +302,7 @@ if __name__ == "__main__":
     print(f"Finished downloading database: {timer()-start:.3f} seconds")
     untar_file()
     print(f"Finished untar               : {timer()-start:.3f} seconds")
-    decode_sql()
-    print(f"Finished decode SQL          : {timer()-start:.3f} seconds")
+    # decode_sql()
+    # print(f"Finished decode SQL          : {timer()-start:.3f} seconds")
     create_database()
     print(f"Finished database creation   : {timer()-start:.3f} seconds")
