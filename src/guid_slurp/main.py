@@ -12,7 +12,7 @@ from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
 
 from guid_slurp.mongo import check_connection
-from guid_slurp.startup import MONGODB_COLLECTION, MONGODB_CONNECTION, MONGODB_DATABASE, fetch_podcastindex_database
+from guid_slurp.startup import MONGODB_COLLECTION, MONGODB_CONNECTION, MONGODB_DATABASE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -101,7 +101,7 @@ def is_valid_iri(iri):
         return False
 
 
-@app.get("/")
+@app.get("/", tags=["resolver"])
 async def root(guid: str = "", url: str = ""):
     """
     Resolve a GUID or URL to a RSS feed URL. Will always
@@ -115,7 +115,7 @@ async def root(guid: str = "", url: str = ""):
     raise HTTPException(status_code=404, detail="Item not found")
 
 
-@app.get("/guid/{guid}")
+@app.get("/guid/{guid}", tags=["resolver"])
 async def resolve_guid(guid: str):
     """
     Resolve a GUID to a RSS feed URL.
@@ -131,7 +131,7 @@ async def resolve_guid(guid: str):
     raise HTTPException(status_code=404, detail="Item not found")
 
 
-@app.get("/url/")
+@app.get("/url/", tags=["resolver"])
 async def resolve_url(url: str):
     """
     Resolve a RSS feed URL to a GUID.
@@ -142,6 +142,32 @@ async def resolve_url(url: str):
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"url": url}, {"_id": 0})
         results = [doc for doc in cursor]
+    if results:
+        return results
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.get("/duplicates/", tags=["problems"])
+async def duplicates():
+    """
+    Find duplicate GUIDs
+    """
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$podcastGuid",
+                "count": {"$sum": 1},
+                "duplicates": {"$push": "$url"},
+            }
+        },
+        {"$match": {"count": {"$gt": 1}}},
+    ]
+
+    with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
+        collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
+        cursor = collection.aggregate(pipeline)
+        results = [doc for doc in cursor]
+
     if results:
         return results
     raise HTTPException(status_code=404, detail="Item not found")

@@ -14,7 +14,7 @@ from pymongo.mongo_client import MongoClient as MongoClientType
 from tqdm import tqdm
 from tqdm.utils import CallbackIOWrapper
 
-MONGODB_CONNECTION = "mongodb://localhost:27017"
+MONGODB_CONNECTION = "mongodb://127.0.0.1:27017"
 MONGODB_DATABASE = "podcastGuidUrl"
 MONGODB_COLLECTION = "guidUrl"
 
@@ -171,13 +171,17 @@ def decode_sql():
         print("CSV File already exists")
         return
     # Execute the query to select the fields from the table
-    c.execute("SELECT podcastGuid, url, originalUrl FROM podcasts")
+    c.execute(
+        "SELECT podcastGuid, url, originalUrl, id as podcastIndexId, itunesId FROM podcasts"
+    )
 
     # Write the rows to a CSV file using an iterator
 
     with open(CSV_PATH, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["podcastGuid", "url", "originalUrl"])  # Write the header row
+        writer.writerow(
+            ["podcastGuid", "url", "originalUrl", "podcastIndexId", "itunesId"]
+        )  # Write the header row
         for row in tqdm(c, total=COUNT_LINES, desc="Creating CSV file", unit="rows"):
             writer.writerow(row)
 
