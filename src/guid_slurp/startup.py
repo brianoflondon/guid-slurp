@@ -8,6 +8,7 @@ from timeit import default_timer as timer
 
 import httpx
 from pymongo import DESCENDING, MongoClient
+from pymongo.mongo_client import MongoClient as MongoClientType
 from tqdm import tqdm
 from tqdm.utils import CallbackIOWrapper
 
@@ -18,19 +19,20 @@ UNTAR_PATH = os.path.join(DIRECTORY, "podcastindex_feeds.db")
 CSV_PATH = os.path.join(DIRECTORY, "podcasts.csv")
 MONGODB_CONNECTION = "mongodb://localhost:27017"
 MONGODB_DATABASE = "podcastGuidUrl"
+MONGODB_COLLECTION = "guidUrl"
 COUNT_LINES = 0
 # Construct the path using os.path.join
 
 
-def check_database_fileinfo() -> dict:
-    with MongoClient(MONGODB_CONNECTION) as client:
+def check_database_fileinfo() -> dict | None:
+    with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         db = client[MONGODB_DATABASE]
         latest_record = db["fileInfo"].find_one(sort=[("timestamp", DESCENDING)])
     return latest_record
 
 
 def write_database_fileinfo(headers: dict):
-    with MongoClient(MONGODB_CONNECTION) as client:
+    with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         db = client[MONGODB_DATABASE]
         timestamp = datetime.now(timezone.utc)
         db["fileInfo"].insert_one(
@@ -68,37 +70,43 @@ def fetch_podcastindex_database():
         ):
             return
 
-    # Send a GET request to the URL and stream the response
-    with httpx.stream("GET", url) as response:
-        # Get the total file size from the Content-Length header
-        total_size = int(response.headers.get("Content-Length", 0))
+    try:
+        # Send a GET request to the URL and stream the response
+        with httpx.stream("GET", url) as response:
+            # Get the total file size from the Content-Length header
+            total_size = int(response.headers.get("Content-Length", 0))
 
-        # Open a file for writing in binary mode
-        with open(DOWNLOAD_PATH, "wb") as f:
-            # Wrap the write method of the file object with tqdm
-            with tqdm.wrapattr(
-                f,
-                "write",
-                desc=f"Downloading: {DOWNLOAD_FILENAME}",
-                unit="B",
-                unit_scale=True,
-                total=total_size,
-            ) as wrapped_file:
-                # Iterate over the response content in chunks and write them to the file
-                for chunk in response.iter_bytes(chunk_size=4096):
-                    wrapped_file.write(chunk)
+            # Open a file for writing in binary mode
+            with open(DOWNLOAD_PATH, "wb") as f:
+                # Wrap the write method of the file object with tqdm
+                with tqdm.wrapattr(
+                    f,
+                    "write",
+                    desc=f"Downloading: {DOWNLOAD_FILENAME}",
+                    unit="B",
+                    unit_scale=True,
+                    total=total_size,
+                ) as wrapped_file:
+                    # Iterate over the response content in
+                    # chunks and write them to the file
+                    for chunk in response.iter_bytes(chunk_size=4096):
+                        wrapped_file.write(chunk)
 
-                # Close the wrapped file object
-                wrapped_file.close()
-        # Get the web modified time
-        web_modified = response.headers.get("Last-Modified")
-        web_modified_timestamp = mktime(
-            strptime(web_modified, "%a, %d %b %Y %H:%M:%S %Z")
-        )
+                    # Close the wrapped file object
+                    wrapped_file.close()
+            # Get the web modified time
+            web_modified = response.headers.get("Last-Modified")
+            web_modified_timestamp = mktime(
+                strptime(web_modified, "%a, %d %b %Y %H:%M:%S %Z")
+            )
 
-        # Set the modified time of the local file
-        os.utime(DOWNLOAD_PATH, (web_modified_timestamp, web_modified_timestamp))
-        write_database_fileinfo(response.headers)
+            # Set the modified time of the local file
+            os.utime(DOWNLOAD_PATH, (web_modified_timestamp, web_modified_timestamp))
+            write_database_fileinfo(response.headers)
+
+    except Exception as ex:
+        print("Error loading database")
+        print(ex)
 
 
 def untar_file():
@@ -170,47 +178,12 @@ def decode_sql():
     conn.close()
 
 
-def create_database():
-    global COUNT_LINES
+def create_indexes(client: MongoClient):
     # Connect to MongoDB
-    client = MongoClient(MONGODB_CONNECTION)
     db = client[MONGODB_DATABASE]
-    collection_name = "guidUrl"
 
     # Access the collection
-    collection = db[collection_name]
-
-    # Delete all data in the collection
-    collection.drop()
-
-    # Path to the CSV file
-    csv_file_path = os.path.join(DIRECTORY, "podcasts.csv")
-
-    # Chunk size for batch insert
-    chunk_size = 1024
-
-    # Read the CSV file and insert data in chunks
-    data = []
-
-    with open(csv_file_path, "r") as file:
-        csv_data = csv.DictReader(file)
-        for row in tqdm(
-            csv_data, desc="Inserting Data", total=COUNT_LINES, unit="rows"
-        ):
-            data.append(dict(row))
-
-            # Insert data in chunks
-            if len(data) == chunk_size:
-                collection = db[collection_name]
-                collection.insert_many(data)
-                data = []  # Clear the data list after inserting a chunk
-
-        # Insert remaining data (less than chunk size) if any
-        if data:
-            collection = db[collection_name]
-            collection.insert_many(data)
-
-    # Close the MongoDB connection
+    collection = db[MONGODB_COLLECTION]
 
     # Create an index
     index_key = "podcastGuid"
@@ -222,7 +195,48 @@ def create_database():
     index_name = "url"
     collection.create_index([(index_key, 1)], name=index_name)
 
-    client.close()
+
+def create_database():
+    global COUNT_LINES
+    # Connect to MongoDB
+    with MongoClient(MONGODB_CONNECTION) as client:
+        db = client[MONGODB_DATABASE]
+
+        # Access the collection
+        collection = db[MONGODB_COLLECTION]
+
+        # Delete all data in the collection
+        collection.drop()
+
+        # Path to the CSV file
+        csv_file_path = os.path.join(DIRECTORY, "podcasts.csv")
+
+        # Chunk size for batch insert
+        chunk_size = 10000
+
+        # Read the CSV file and insert data in chunks
+        data = []
+
+        with open(csv_file_path, "r") as file:
+            csv_data = csv.DictReader(file)
+            for row in tqdm(
+                csv_data, desc="Inserting Data", total=COUNT_LINES, unit="rows"
+            ):
+                data.append(dict(row))
+
+                # Insert data in chunks
+                if len(data) == chunk_size:
+                    collection = db[MONGODB_COLLECTION]
+                    collection.insert_many(data)
+                    data = []  # Clear the data list after inserting a chunk
+
+            # Insert remaining data (less than chunk size) if any
+            if data:
+                collection = db[MONGODB_COLLECTION]
+                collection.insert_many(data)
+
+        # Create indexes
+        create_indexes(client)
 
 
 if __name__ == "__main__":
