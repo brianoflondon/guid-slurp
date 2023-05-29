@@ -71,8 +71,9 @@ def fetch_podcastindex_database():
         file_size = os.path.getsize(DOWNLOAD_PATH)
 
         if (
-            file_size == remote_file_size
-            and latest_record["Last-Modified"] == remote_file_modified
+            file_size
+            == remote_file_size
+            # and latest_record and latest_record["Last-Modified"] == remote_file_modified
         ):
             return
 
