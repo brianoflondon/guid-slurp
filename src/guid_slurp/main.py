@@ -1,4 +1,6 @@
 import logging
+import os
+import sys
 import uuid
 from timeit import default_timer as timer
 
@@ -9,7 +11,16 @@ from pymongo import MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
 
-from guid_slurp.startup import MONGODB_COLLECTION, MONGODB_CONNECTION, MONGODB_DATABASE
+from guid_slurp.mongo import check_connection
+from guid_slurp.startup import MONGODB_COLLECTION, MONGODB_CONNECTION, MONGODB_DATABASE, fetch_podcastindex_database
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(module)-14s %(lineno) 5d : %(message)s",
+    stream=sys.stdout,
+)
+logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
+
 
 __version__ = get_version(__name__, "", default_return="0.0.1")
 if __version__ is None:
@@ -27,6 +38,7 @@ app = FastAPI(
     # },
     # license_info={"name": "MIT", "url": ""},
 )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,6 +64,24 @@ async def add_process_time_header(request: Request, call_next):
     )
     logging.debug(f"Process time: {process_time}")
     return response
+
+
+def is_running_in_docker() -> bool:
+    return os.path.exists("/.dockerenv")
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """Startup code"""
+    global MONGODB_CONNECTION
+    logging.info(f"Logger Starting Guid Slurp API {__name__}")
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
+    if is_running_in_docker():
+        logging.info("Running in Docker")
+        MONGODB_CONNECTION = "mongodb://mongodb:27017/"
+    logging.info(f"MongoDB connection check: {check_connection(MONGODB_CONNECTION)}")
+
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
 
 
 def is_valid_uuid4(uuid_string: str) -> bool:

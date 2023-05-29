@@ -1,7 +1,9 @@
 import csv
+import logging
 import os
 import sqlite3
 import tarfile
+import tempfile
 from datetime import datetime, timezone
 from time import mktime, strptime
 from timeit import default_timer as timer
@@ -12,14 +14,18 @@ from pymongo.mongo_client import MongoClient as MongoClientType
 from tqdm import tqdm
 from tqdm.utils import CallbackIOWrapper
 
-DIRECTORY = "/tmp/podcastindex/"
+MONGODB_CONNECTION = "mongodb://localhost:27017"
+MONGODB_DATABASE = "podcastGuidUrl"
+MONGODB_COLLECTION = "guidUrl"
+
+
+DIRECTORY = os.path.join(tempfile.gettempdir(), "podcastindex")
 DOWNLOAD_FILENAME = "podcastindex_feeds.db.tgz"
 DOWNLOAD_PATH = os.path.join(DIRECTORY, DOWNLOAD_FILENAME)
 UNTAR_PATH = os.path.join(DIRECTORY, "podcastindex_feeds.db")
 CSV_PATH = os.path.join(DIRECTORY, "podcasts.csv")
-MONGODB_CONNECTION = "mongodb://localhost:27017"
-MONGODB_DATABASE = "podcastGuidUrl"
-MONGODB_COLLECTION = "guidUrl"
+
+
 COUNT_LINES = 0
 # Construct the path using os.path.join
 
@@ -205,6 +211,10 @@ def create_database():
         # Access the collection
         collection = db[MONGODB_COLLECTION]
 
+        if COUNT_LINES == collection.count_documents({}):
+            print("Database already created")
+            return
+
         # Delete all data in the collection
         collection.drop()
 
@@ -216,12 +226,14 @@ def create_database():
 
         # Read the CSV file and insert data in chunks
         data = []
+        timestamp = datetime.now(timezone.utc)
 
         with open(csv_file_path, "r") as file:
             csv_data = csv.DictReader(file)
             for row in tqdm(
                 csv_data, desc="Inserting Data", total=COUNT_LINES, unit="rows"
             ):
+                row["timestamp"] = timestamp
                 data.append(dict(row))
 
                 # Insert data in chunks
@@ -239,9 +251,25 @@ def create_database():
         create_indexes(client)
 
 
+def is_running_in_docker() -> bool:
+    return os.path.exists("/.dockerenv")
+
+
 if __name__ == "__main__":
     start = timer()
     print("Starting import...")
+
+    if is_running_in_docker():
+        print("Running in Docker")
+        MONGODB_CONNECTION = "mongodb://mongodb:27017/"
+        DIRECTORY = os.path.join("data/", "podcastindex")
+        DOWNLOAD_FILENAME = "podcastindex_feeds.db.tgz"
+        DOWNLOAD_PATH = os.path.join(DIRECTORY, DOWNLOAD_FILENAME)
+        UNTAR_PATH = os.path.join(DIRECTORY, "podcastindex_feeds.db")
+        CSV_PATH = os.path.join(DIRECTORY, "podcasts.csv")
+
+    print(f"MongoDB connection: {MONGODB_CONNECTION}")
+
     fetch_podcastindex_database()
     print(f"Finished downloading database: {timer()-start:.3f} seconds")
     untar_file()
