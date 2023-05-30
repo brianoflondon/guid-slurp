@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: FastAPI",
+            "name": "FastAPI",
             "type": "python",
             "request": "launch",
             "module": "uvicorn",
@@ -17,7 +17,7 @@
             "justMyCode": true
         },
         {
-            "name": "Python: Current File",
+            "name": "Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",

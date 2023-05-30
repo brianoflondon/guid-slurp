@@ -1,10 +1,8 @@
 import logging
 import os
 import sys
-import uuid
 from timeit import default_timer as timer
 
-import rfc3987
 from fastapi import FastAPI, HTTPException, Path, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import UUID5, HttpUrl
@@ -85,25 +83,8 @@ async def startup_event() -> None:
     logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
 
 
-def is_valid_uuid4(uuid_string: str) -> bool:
-    try:
-        _ = uuid.UUID(uuid_string, version=4)
-        return True
-    except ValueError:
-        # If it's a value error, then the string is not a valid hex code for a UUID.
-        return False
-
-
-def is_valid_iri(iri):
-    try:
-        rfc3987.parse(iri, rule="IRI")
-        return True
-    except ValueError:
-        return False
-
-
 @app.get("/", tags=["resolver"])
-async def root(guid: UUID5 | None, url: HttpUrl | None):
+async def root(guid: UUID5 | None = None, url: HttpUrl | None = None):
     """
     Resolve a GUID or URL to a RSS feed URL. Will always
     resolve a GUID first if both are passed.
@@ -135,8 +116,6 @@ async def resolve_url(url: HttpUrl):
     """
     Resolve a RSS feed URL to a GUID.
     """
-    if not is_valid_iri(url):
-        raise HTTPException(status_code=400, detail="Bad RSS URL")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"url": url}, {"_id": 0})
