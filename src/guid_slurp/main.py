@@ -5,8 +5,9 @@ import uuid
 from timeit import default_timer as timer
 
 import rfc3987
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Path, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import UUID5, HttpUrl
 from pymongo import MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
@@ -102,7 +103,7 @@ def is_valid_iri(iri):
 
 
 @app.get("/", tags=["resolver"])
-async def root(guid: str = "", url: str = ""):
+async def root(guid: UUID5 | None, url: HttpUrl | None):
     """
     Resolve a GUID or URL to a RSS feed URL. Will always
     resolve a GUID first if both are passed.
@@ -116,15 +117,13 @@ async def root(guid: str = "", url: str = ""):
 
 
 @app.get("/guid/{guid}", tags=["resolver"])
-async def resolve_guid(guid: str):
+async def resolve_guid(guid: UUID5):
     """
     Resolve a GUID to a RSS feed URL.
     """
-    if not is_valid_uuid4(guid):
-        raise HTTPException(status_code=400, detail="Bad GUID")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
-        cursor = collection.find({"podcastGuid": guid}, {"_id": 0})
+        cursor = collection.find({"podcastGuid": str(guid)}, {"_id": 0})
         results = [doc for doc in cursor]
     if results:
         return results
@@ -132,7 +131,7 @@ async def resolve_guid(guid: str):
 
 
 @app.get("/url/", tags=["resolver"])
-async def resolve_url(url: str):
+async def resolve_url(url: HttpUrl):
     """
     Resolve a RSS feed URL to a GUID.
     """
@@ -141,6 +140,36 @@ async def resolve_url(url: str):
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"url": url}, {"_id": 0})
+        results = [doc for doc in cursor]
+    if results:
+        return results
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.get("/itunesId/{itunesId}", tags=["resolver"])
+async def resolve_itunesId(
+    itunesId: int = Path(gt=0, le=100000000000, description="iTunes ID")
+):
+    """
+    Resolve a iTunes ID to a RSS feed URL.
+    """
+    with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
+        collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
+        cursor = collection.find({"itunesId": itunesId}, {"_id": 0})
+        results = [doc for doc in cursor]
+    if results:
+        return results
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.get("/podcastIndexId/{podcastIndexId}", tags=["resolver"])
+async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=100000000000)):
+    """
+    Resolve a PodcastIndex ID to a RSS feed URL.
+    """
+    with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
+        collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
+        cursor = collection.find({"podcastIndexId": podcastIndexId}, {"_id": 0})
         results = [doc for doc in cursor]
     if results:
         return results
@@ -161,6 +190,7 @@ async def duplicates():
             }
         },
         {"$match": {"count": {"$gt": 1}}},
+        {"$sort": {"count": -1}},
     ]
 
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType

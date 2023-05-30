@@ -71,10 +71,11 @@ def fetch_podcastindex_database():
         file_size = os.path.getsize(DOWNLOAD_PATH)
 
         if (
-            file_size
-            == remote_file_size
-            # and latest_record and latest_record["Last-Modified"] == remote_file_modified
+            file_size == remote_file_size
+            and latest_record
+            and latest_record["Last-Modified"] == remote_file_modified
         ):
+            write_database_fileinfo(response.headers)
             return
 
     try:
@@ -109,7 +110,6 @@ def fetch_podcastindex_database():
 
             # Set the modified time of the local file
             os.utime(DOWNLOAD_PATH, (web_modified_timestamp, web_modified_timestamp))
-            write_database_fileinfo(response.headers)
 
     except Exception as ex:
         print("Error loading database")
@@ -240,7 +240,7 @@ def create_database():
 
             if COUNT_LINES == collection.count_documents({}):
                 print("Database already created")
-                # return
+                return
 
             # Delete all data in the collection
             collection.drop()
