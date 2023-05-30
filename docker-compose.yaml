@@ -60,7 +60,7 @@ services:
     env_file:
       - .env
     ports:
-      - 777:80
+      - ${API_port}:80
     volumes:
       - guid-slurp-data:/app/data
     restart: unless-stopped
@@ -80,7 +80,6 @@ services:
     ports:
       - "127.0.1.1:27017:27017"
       - "127.0.0.1:27017:27017"
-    # command: mongod --bind_ip localhost,${LOCAL_TAILSCALE_NAME} --replSet v4vapp-repl
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped
