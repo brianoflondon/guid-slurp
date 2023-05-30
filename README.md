@@ -24,6 +24,12 @@ Then run this if you wish to have a fully public API resolver (involving Traefik
 docker compose up --build -d
 ```
 
+You can execute all these with this one command:
+
+```bash
+git clone https://github.com/brianoflondon/guid-slurp.git && cd guid-slurp && docker-compose up --build -d
+```
+
 Alternatively for a local version only:
 ```bash
 docker compose -f docker-compose-no-traefik.yaml up --build -d
@@ -87,4 +93,3 @@ I'd suggest 2GB of RAM is a minimum but having said that, I have managed to run 
 ## Depreciated
 
 I've removed this stage of using the staging certificate.
-
