@@ -45,7 +45,9 @@ services:
           max-size: "10m"
 
   api:
-    image: "brianoflondon/guid-slurp:develop"
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: [
       "gunicorn", "guid_slurp.main:app",
       "--proxy-protocol",

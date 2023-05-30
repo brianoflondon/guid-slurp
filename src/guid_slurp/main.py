@@ -155,7 +155,7 @@ async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=10000000000
     raise HTTPException(status_code=404, detail="Item not found")
 
 
-@app.get("/duplicates/", tags=["problems"])
+@app.get("/duplicates/", tags=["problems"], include_in_schema=False)
 async def duplicates():
     """
     Find duplicate GUIDs
