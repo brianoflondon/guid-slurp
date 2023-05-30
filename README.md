@@ -18,11 +18,17 @@ cd guid-slurp
 
 Now you need to edit the `.env.sample` file and rename it `.env`.
 
-Then run this:
+Then run this if you wish to have a fully public API resolver (involving Traefik):
 
 ```bash
 docker compose up --build -d
 ```
+
+Alternatively for a local version only:
+```bash
+docker compose -f docker-compose-no-traefik.yaml up --build -d
+```
+
 
 If my calculations are correct, when you hit 88 MPH... oh, wait, no.
 
