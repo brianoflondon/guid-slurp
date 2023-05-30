@@ -66,6 +66,7 @@ def fetch_podcastindex_database():
         response = httpx.head(url)
         remote_file_size = int(response.headers.get("Content-Length"))
         remote_file_modified = response.headers.get("Last-Modified")
+        write_database_fileinfo(response.headers)
 
         # Get the size of the local file
         file_size = os.path.getsize(DOWNLOAD_PATH)
@@ -75,7 +76,6 @@ def fetch_podcastindex_database():
             and latest_record
             and latest_record["Last-Modified"] == remote_file_modified
         ):
-            write_database_fileinfo(response.headers)
             return
 
     try:
@@ -211,6 +211,11 @@ def create_indexes(client: MongoClient):
     index_name = "podcastIndexId"
     collection.create_index([(index_key, 1)], name=index_name)
 
+    # Create an index
+    index_key = "itunesId"
+    index_name = "itunesId"
+    collection.create_index([(index_key, 1)], name=index_name)
+
 
 def create_database():
     global COUNT_LINES
@@ -283,9 +288,15 @@ def is_running_in_docker() -> bool:
     return os.path.exists("/.dockerenv")
 
 
-if __name__ == "__main__":
+def startup_import():
+    """
+    Startup import
+    """
     start = timer()
-    print("Starting import...")
+    print("Starting import of PodcastIndex DB Dump ...")
+
+    global MONGODB_CONNECTION, DIRECTORY, DOWNLOAD_FILENAME, DOWNLOAD_PATH
+    global UNTAR_PATH, CSV_PATH
 
     if is_running_in_docker():
         print("Running in Docker")
@@ -305,4 +316,10 @@ if __name__ == "__main__":
     # decode_sql()
     # print(f"Finished decode SQL          : {timer()-start:.3f} seconds")
     create_database()
+    # Remove the untarred file
+    os.remove(UNTAR_PATH)
     print(f"Finished database creation   : {timer()-start:.3f} seconds")
+
+
+if __name__ == "__main__":
+    startup_import()
