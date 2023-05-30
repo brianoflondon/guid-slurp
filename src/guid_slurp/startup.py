@@ -84,7 +84,6 @@ def fetch_podcastindex_database():
             and latest_record["Last-Modified"] == remote_file_modified
         ):
             print(f"Existing File is up to date  {DOWNLOAD_PATH}")
-
             return
 
     try:
@@ -92,7 +91,7 @@ def fetch_podcastindex_database():
         with httpx.stream("GET", url) as response:
             # Get the total file size from the Content-Length header
             total_size = int(response.headers.get("Content-Length", 0))
-
+            write_database_fileinfo(response.headers)
             # Open a file for writing in binary mode
             with open(DOWNLOAD_PATH, "wb") as f:
                 # Wrap the write method of the file object with tqdm
