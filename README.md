@@ -50,3 +50,30 @@ guid-slurp-start    | Finished database finalisation: 897.155 s
 ```
 
 The API front end will then be available on `http://your_machine_ip:7777/docs` and on the internet depending on the settings you put in the .env file.
+
+
+### Logs and stuff
+
+To see the containers you have running use this:
+
+```bash
+docker ps
+```
+
+You should see something like this:
+```bash
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS         PORTS                                                    NAMES
+e5452edacfd9   guid-slurp-api       "gunicorn guid_slurp…"   4 minutes ago   Up 4 minutes   0.0.0.0:7777->80/tcp, :::7777->80/tcp                    guid-slurp-api
+8d8d56b957e7   mongo:latest         "docker-entrypoint.s…"   4 minutes ago   Up 4 minutes   127.0.0.1:27017->27017/tcp, 127.0.1.1:27017->27017/tcp   guid-slurp-mongodb
+36029929726a   guid-slurp-startup   "python guid_slurp/s…"   4 minutes ago   Up 4 minutes                                                            guid-slurp-start
+```
+
+To inspect logs from any of these use:
+
+```bash
+docker logs guid-slurp-startup -f
+```
+
+The startup script will run and then disappear. The others should remain running and will restart if the machine reboots.
+
+I haven't written an automated way of updating the database every week... stay tuned!
