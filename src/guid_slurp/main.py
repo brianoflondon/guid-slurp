@@ -191,7 +191,11 @@ async def admin(request: Request):
     Admin page
     """
     if not request.headers.get("X-secret") == "zz9pza":
-        return {"message": "Admin page"}
+        with MongoClient(MONGODB_CONNECTION) as client:
+            collection = client[MONGODB_DATABASE]["fileInfo"]
+            cursor = collection.find({}, {"_id": 0})
+            results = [doc for doc in cursor]
+            return results
     startup_import()
     return {"message": "Import Completed"}
 
