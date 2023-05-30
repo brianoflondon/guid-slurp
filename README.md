@@ -21,7 +21,7 @@ Now you need to edit the `.env.sample` file and rename it `.env`.
 Then run this:
 
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
 
 If my calculations are correct, when you hit 88 MPH... oh, wait, no.

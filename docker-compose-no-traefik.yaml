@@ -1,0 +1,89 @@
+version: '3'
+
+services:
+
+  startup:
+    build:
+      context: .
+    command: [
+      "python", "guid_slurp/startup.py"
+    ]
+    container_name: "guid-slurp-start"
+    networks:
+      - guid-slurp-internal
+    env_file:
+      - .env
+    volumes:
+      - guid-slurp-data:/app/data
+    restart: no
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+
+  api:
+    build:
+      context: .
+    command: [
+      "gunicorn", "guid_slurp.main:app",
+      "--proxy-protocol",
+      "--workers", "4",
+      "--worker-class", "uvicorn.workers.UvicornWorker",
+      "--bind", "0.0.0.0:80"
+    ]
+    container_name: "guid-slurp-api"
+    networks:
+      - guid-slurp-traefik
+      - guid-slurp-internal
+    env_file:
+      - .env
+    ports:
+      - ${API_port}:80
+    volumes:
+      - guid-slurp-data:/app/data
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+
+
+  mongodb:
+    container_name: guid-slurp-mongodb
+    hostname: mongodb
+    image: mongo:latest
+    env_file:
+      - ".env"
+    ports:
+      - "127.0.1.1:27017:27017"
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+    networks:
+      - guid-slurp-internal
+
+
+networks:
+  guid-slurp-traefik:
+    driver: bridge
+  guid-slurp-internal:
+    driver: bridge
+
+
+volumes:
+  traefik-ssl-certs:
+    driver: local
+
+  mongodb-data:
+    driver: local
+
+  guid-slurp-data:
+    driver: local
