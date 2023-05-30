@@ -23,7 +23,10 @@ services:
   #         max-size: "10m"
 
   startup:
-    image: "brianoflondon/guid-slurp:develop"
+    # image: "brianoflondon/guid-slurp:develop"
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: [
       "python", "guid_slurp/startup.py"
     ]
