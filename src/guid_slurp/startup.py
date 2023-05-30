@@ -359,5 +359,4 @@ def startup_import():
 
 
 if __name__ == "__main__":
-    finish_database_import()
     startup_import()
