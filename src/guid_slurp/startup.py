@@ -73,11 +73,18 @@ def fetch_podcastindex_database():
         # Get the size of the local file
         file_size = os.path.getsize(DOWNLOAD_PATH)
 
+        print(f"Remote file size    : {remote_file_size}")
+        print(f"Local file size     : {file_size}")
+        print(f"Remote file modified: {remote_file_modified}")
+        print(f"Local file modified : {latest_record['Last-Modified']}")
+
         if (
             file_size == remote_file_size
             and latest_record
             and latest_record["Last-Modified"] == remote_file_modified
         ):
+            print(f"Existing File is up to date  {DOWNLOAD_PATH}")
+
             return
 
     try:
