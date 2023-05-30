@@ -38,22 +38,6 @@ entryPoints:
 
 # These resolvers use Cloudflare DNS API instead of web challenge
 certificatesResolvers:
-  cloudflare-staging:
-    acme:
-      email: {env "CERT_EMAIL"}
-      storage: /ssl-certs/acme.json
-      caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
-      dnsChallenge:
-        provider: cloudflare
-
-  cloudflare-production:
-    acme:
-      email: {env "CERT_EMAIL"}
-      storage: /ssl-certs/acme.json
-      caServer: "https://acme-v02.api.letsencrypt.org/directory"
-      dnsChallenge:
-        provider: cloudflare
-
   staging:
     acme:
       email: {env "CERT_EMAIL"}
@@ -79,7 +63,7 @@ http:
         - "websecure"
       rule: Host(`{{env "EXTERNAL_API_DOMAIN"}}`)
       tls:
-        certresolver: {env "CERT_RESOLVER_STATUS"}
+        certresolver: production
       service: guid-resolver
 
 
