@@ -193,7 +193,7 @@ async def admin(request: Request):
     if not request.headers.get("X-secret") == "zz9pza":
         with MongoClient(MONGODB_CONNECTION) as client:
             collection = client[MONGODB_DATABASE]["fileInfo"]
-            cursor = collection.find({}, {"_id": 0})
+            cursor = collection.find({}, {"_id": 0}).sort("timestamp", -1)
             results = [doc for doc in cursor]
             return results
     startup_import()
