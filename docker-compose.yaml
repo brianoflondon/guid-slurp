@@ -63,6 +63,9 @@ services:
       - ${API_PORT}:80
     volumes:
       - guid-slurp-data:/app/data
+    labels:
+      # Enable Traefik for this specific "api" service
+      - traefik.enable=true
     restart: unless-stopped
     logging:
       driver: "json-file"
