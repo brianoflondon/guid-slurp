@@ -7,6 +7,7 @@ import tempfile
 from datetime import datetime, timezone
 from time import mktime, strptime
 from timeit import default_timer as timer
+from typing import Any, Mapping, Sequence
 
 import httpx
 from pymongo import DESCENDING, MongoClient
@@ -17,6 +18,7 @@ from tqdm.utils import CallbackIOWrapper
 MONGODB_CONNECTION = "mongodb://127.0.0.1:27017"
 MONGODB_DATABASE = "podcastGuidUrl"
 MONGODB_COLLECTION = "guidUrl"
+MONGODB_DUPLICATES = "duplicateGuidUrl"
 
 
 DIRECTORY = os.path.join(tempfile.gettempdir(), "podcastindex")
@@ -217,6 +219,33 @@ def create_indexes(client: MongoClient):
     collection.create_index([(index_key, 1)], name=index_name)
 
 
+def create_views(client: MongoClient):
+    """
+    Create views on the database
+    """
+    # check if collection duplicatesGuid exists
+    db = client[MONGODB_DATABASE]
+    if MONGODB_DUPLICATES in db.list_collection_names():
+        print("Collection duplicatesGuid already exists")
+        # return
+    # Duplicates of GUID
+    pipeline: Sequence[Mapping[str, Any]] = [
+        {
+            "$group": {
+                "_id": "$podcastGuid",
+                "count": {"$sum": 1},
+                "duplicates": {"$push": "$url"},
+            }
+        },
+        {"$match": {"count": {"$gt": 1}}},
+        {"$sort": {"count": -1}},
+        {"$out": MONGODB_DUPLICATES},
+    ]
+    print("Creating collection of duplicatesGuidUrl  .... slow operation")
+    db[MONGODB_COLLECTION].aggregate(pipeline)
+    print("🟢Created collection of duplicatesGuidUrl")
+
+
 def create_database():
     global COUNT_LINES
     with sqlite3.connect(UNTAR_PATH) as conn:
@@ -280,8 +309,14 @@ def create_database():
                 collection = db[MONGODB_COLLECTION]
                 collection.insert_many(data)
 
-            # Create indexes
-            create_indexes(client)
+
+def finish_database_import():
+    """
+    Finish the database import
+    """
+    with MongoClient(MONGODB_CONNECTION) as client:
+        create_indexes(client)
+        create_views(client)
 
 
 def is_running_in_docker() -> bool:
@@ -310,16 +345,19 @@ def startup_import():
     print(f"MongoDB connection: {MONGODB_CONNECTION}")
 
     fetch_podcastindex_database()
-    print(f"Finished downloading database: {timer()-start:.3f} seconds")
+    print(f"Finished downloading database : {timer()-start:.3f} s")
     untar_file()
-    print(f"Finished untar               : {timer()-start:.3f} seconds")
+    print(f"Finished untar                : {timer()-start:.3f} s")
     # decode_sql()
-    # print(f"Finished decode SQL          : {timer()-start:.3f} seconds")
+    # print(f"Finished decode SQL          : {timer()-start:.3f} s")
     create_database()
     # Remove the untarred file
     os.remove(UNTAR_PATH)
-    print(f"Finished database creation   : {timer()-start:.3f} seconds")
+    print(f"Finished database creation    : {timer()-start:.3f} s")
+    finish_database_import()
+    print(f"Finished database finalisation: {timer()-start:.3f} s")
 
 
 if __name__ == "__main__":
+    finish_database_import()
     startup_import()

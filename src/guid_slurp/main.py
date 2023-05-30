@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from datetime import UTC, datetime, timedelta
 from timeit import default_timer as timer
 
 from fastapi import FastAPI, HTTPException, Path, Request
@@ -11,7 +12,13 @@ from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
 
 from guid_slurp.mongo import check_connection
-from guid_slurp.startup import MONGODB_COLLECTION, MONGODB_CONNECTION, MONGODB_DATABASE
+from guid_slurp.startup import (
+    MONGODB_COLLECTION,
+    MONGODB_CONNECTION,
+    MONGODB_DATABASE,
+    MONGODB_DUPLICATES,
+    startup_import,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,6 +55,25 @@ app.add_middleware(
 )
 
 
+def get_cache_headers(max_age: int = 3600, reason: str = "") -> dict:
+    """
+    Returns the cache headers for Cloudflare
+    """
+    headers = {}
+    headers[
+        "Cache-Control"
+    ] = f"public, max-age={max_age}, stale-while-revalidate=86400"
+    headers["Expires"] = (datetime.now(tz=UTC) + timedelta(seconds=max_age)).strftime(
+        "%a, %d %b %Y %H:%M:%S GMT"
+    )
+    headers["Pragma"] = "cache"
+    headers["X-Reason"] = reason if reason else ""
+    headers["Last-Modified"] = datetime.now(tz=UTC).strftime(
+        "%a, %d %b %Y %H:%M:%S GMT"
+    )
+    return headers
+
+
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = timer()
@@ -61,6 +87,10 @@ async def add_process_time_header(request: Request, call_next):
         f"Request: {request.url.path} query: {request.url.query} "
         f"time: {process_time*1000:.3f}ms"
     )
+    # new_headers = get_cache_headers(max_age=3600, reason="API")
+    # # combine response.headers with the new_headers
+    # response.headers.update(new_headers)
+
     logging.debug(f"Process time: {process_time}")
     return response
 
@@ -155,27 +185,33 @@ async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=10000000000
     raise HTTPException(status_code=404, detail="Item not found")
 
 
-@app.get("/duplicates/", tags=["problems"], include_in_schema=False)
+@app.get("/admin", tags=["admin"], include_in_schema=True)
+async def admin(request: Request):
+    """
+    Admin page
+    """
+    if not request.headers.get("X-secret") == "zz9pza":
+        return {"message": "Admin page"}
+    startup_import()
+    return {"message": "Import Completed"}
+
+
+@app.get("/duplicates/", tags=["problems"], include_in_schema=True)
 async def duplicates():
     """
     Find duplicate GUIDs
     """
-    pipeline = [
-        {
-            "$group": {
-                "_id": "$podcastGuid",
-                "count": {"$sum": 1},
-                "duplicates": {"$push": "$url"},
-            }
-        },
-        {"$match": {"count": {"$gt": 1}}},
-        {"$sort": {"count": -1}},
-    ]
 
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
-        collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
-        cursor = collection.aggregate(pipeline)
-        results = [doc for doc in cursor]
+        collection = client[MONGODB_DATABASE][MONGODB_DUPLICATES]
+        cursor = collection.find({})
+        results = []
+        for doc in cursor:
+            doc["podcastGuid"] = doc["_id"]
+            # delete the doc["_id"] key
+            del doc["_id"]
+            results.append(doc)
+        # results = [doc for doc in cursor]
 
     if results:
         return results
