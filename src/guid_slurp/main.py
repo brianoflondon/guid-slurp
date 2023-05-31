@@ -114,7 +114,7 @@ async def startup_event() -> None:
 
 
 @app.get("/", tags=["resolver"])
-async def root(guid: UUID5 | None = None, url: HttpUrl | None = None):
+async def root(guid: UUID5 | str = None, url: HttpUrl | str = None):
     """
     Resolve a GUID or URL to a RSS feed URL. Will always
     resolve a GUID first if both are passed.
@@ -128,7 +128,7 @@ async def root(guid: UUID5 | None = None, url: HttpUrl | None = None):
 
 
 @app.get("/guid/{guid}", tags=["resolver"])
-async def resolve_guid(guid: UUID5):
+async def resolve_guid(guid: UUID5 | str):
     """
     Resolve a GUID to a RSS feed URL.
     """
