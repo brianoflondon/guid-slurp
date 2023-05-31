@@ -4,7 +4,7 @@ import sys
 from datetime import UTC, datetime, timedelta
 from timeit import default_timer as timer
 
-from fastapi import FastAPI, HTTPException, Path, Request
+from fastapi import FastAPI, HTTPException, Path, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import UUID5, HttpUrl
 from pymongo import MongoClient
@@ -160,7 +160,7 @@ async def resolve_itunesId(
     itunesId: int = Path(gt=0, le=100000000000, description="iTunes ID")
 ):
     """
-    Resolve a iTunes ID to a RSS feed URL.
+    Resolve an iTunes ID to a RSS feed URL.
     """
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
@@ -188,7 +188,7 @@ async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=10000000000
 @app.get("/admin", tags=["admin"], include_in_schema=True)
 async def admin(request: Request):
     """
-    Admin page
+    Admin page lists when the raw data was imported
     """
     if not request.headers.get("X-secret") == "zz9pza":
         with MongoClient(MONGODB_CONNECTION) as client:
@@ -201,14 +201,18 @@ async def admin(request: Request):
 
 
 @app.get("/duplicates/", tags=["problems"], include_in_schema=True)
-async def duplicates():
+async def duplicates(guid: str = Query("", description="GUID")):
     """
-    Find duplicate GUIDs
+    Find duplicate GUIDs. Returns a static dump of all duplicated IDs.
+    If no GUID is passed, it will return all duplicates.
     """
-
+    if guid:
+        query = {"_id": str(guid)}
+    else:
+        query = {}
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_DUPLICATES]
-        cursor = collection.find({})
+        cursor = collection.find(query)
         results = []
         for doc in cursor:
             doc["podcastGuid"] = doc["_id"]

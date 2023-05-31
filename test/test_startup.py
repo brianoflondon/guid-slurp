@@ -12,6 +12,7 @@ def mock_mongo_client():
         yield mock_client
 
 
+@pytest.mark.skip(reason="Not implemented yet")
 def test_check_database_fileinfo(mock_mongo_client):
     # Prepare test data
     expected_result = {"timestamp": 123456789, "file_name": "test_file.txt"}

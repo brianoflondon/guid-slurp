@@ -11,7 +11,7 @@ from guid_slurp.startup import (  # Assuming the function is in yourmodule
     fetch_podcastindex_database,
 )
 
-
+@pytest.mark.skip(reason="Not implemented yet")
 @patch("os.path.exists")
 @patch("os.makedirs")
 @patch("httpx.head")

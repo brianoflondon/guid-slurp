@@ -1,5 +1,4 @@
 import csv
-import logging
 import os
 import sqlite3
 import tarfile
@@ -7,9 +6,11 @@ import tempfile
 from datetime import datetime, timezone
 from time import mktime, strptime
 from timeit import default_timer as timer
-from typing import Any, Mapping, Sequence
+from typing import Any, List, Mapping, Sequence
+from urllib.parse import urlparse
 
 import httpx
+from pydantic import UUID5, AnyUrl, BaseModel, Field
 from pymongo import DESCENDING, MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 from tqdm import tqdm
@@ -225,22 +226,24 @@ def create_indexes(client: MongoClient):
     collection.create_index([(index_key, 1)], name=index_name)
 
 
-def create_views(client: MongoClient):
+def create_duplicate_collection(client: MongoClient):
     """
-    Create views on the database
+    Create the Duplicate collection in the database
     """
     # check if collection duplicatesGuid exists
     db = client[MONGODB_DATABASE]
     if MONGODB_DUPLICATES in db.list_collection_names():
         print("Collection duplicatesGuid already exists")
-        # return
+        return
     # Duplicates of GUID
     pipeline: Sequence[Mapping[str, Any]] = [
         {
             "$group": {
                 "_id": "$podcastGuid",
                 "count": {"$sum": 1},
-                "duplicates": {"$push": "$url"},
+                "duplicates": {
+                    "$push": {"url": "$url", "podcastIndexId": "$podcastIndexId"}
+                },
             }
         },
         {"$match": {"count": {"$gt": 1}}},
@@ -250,6 +253,45 @@ def create_views(client: MongoClient):
     print("Creating collection of duplicatesGuidUrl  .... slow operation")
     db[MONGODB_COLLECTION].aggregate(pipeline)
     print("🟢Created collection of duplicatesGuidUrl")
+
+
+class DuplicateRecord(BaseModel):
+    url: AnyUrl | str
+    podcastIndexId: int
+
+
+class Duplicates(BaseModel):
+    podcastGuid: UUID5 | str = Field("", alias="_id")
+    count: int
+    duplicates: List[DuplicateRecord]
+
+
+def process_duplicates(client: MongoClient):
+    """
+    Takes the duplicate colleciton and highlights where the duplicates are
+    all from the same base URL
+    """
+    db = client[MONGODB_DATABASE]
+    collection = db[MONGODB_DUPLICATES]
+    cursor = collection.find({})
+    unique_url_count = {}
+    print("Starting the process of duplicatesGuidUrl  .... slow operation")
+    for doc in cursor:
+        record = Duplicates(**doc)
+        all_urls = {urlparse(item.url).netloc for item in record.duplicates}
+        all_podcastIds = {item.podcastIndexId for item in record.duplicates}
+        # print(f"Duplicates: {len(record.duplicates):>4} :  {len(all_urls)}")
+        unique_url_count[record.podcastGuid] = len(all_urls)
+        query = {"_id": str(record.podcastGuid)}
+        update = {
+            "$set": {
+                "uniqueDomainCount": len(all_urls),
+                "uniqueDomains": list(all_urls),
+                "podcastIndexId": list(all_podcastIds),
+            }
+        }
+        collection.update_one(query, update)
+    print("🟢Finished the process of duplicatesGuidUrl  .... slow operation")
 
 
 def create_database():
@@ -322,7 +364,7 @@ def finish_database_import():
     """
     with MongoClient(MONGODB_CONNECTION) as client:
         create_indexes(client)
-        create_views(client)
+        create_duplicate_collection(client)
 
 
 def is_running_in_docker() -> bool:
@@ -365,4 +407,7 @@ def startup_import():
 
 
 if __name__ == "__main__":
+    # with MongoClient(MONGODB_CONNECTION) as client:
+    #     create_duplicate_collection(client)
+    #     process_duplicates(client)
     startup_import()
