@@ -3,7 +3,6 @@ import csv
 import logging
 import os
 import sqlite3
-import sys
 import tarfile
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -39,14 +38,15 @@ COUNT_LINES = 0
 logger = logging.getLogger(__name__)
 
 
-def check_database_fileinfo() -> dict | None:
+def check_database_fileinfo() -> dict[Any, Any]:
+    latest_record: dict[Any:Any] = {}
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         db = client[MONGODB_DATABASE]
         latest_record = db["fileInfo"].find_one(sort=[("timestamp", DESCENDING)])
     return latest_record
 
 
-def write_database_fileinfo(headers: dict):
+def write_database_fileinfo(headers: dict[Any, Any]):
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         db = client[MONGODB_DATABASE]
         timestamp = datetime.now(timezone.utc)
@@ -54,6 +54,7 @@ def write_database_fileinfo(headers: dict):
             {
                 "Content-Length": headers.get("Content-Length"),
                 "Last-Modified": headers.get("Last-Modified"),
+                "etag": headers.get("etag"),
                 "timestamp": timestamp,
             }
         )
@@ -75,28 +76,12 @@ def check_new_podcastindex_database() -> bool:
         latest_record = check_database_fileinfo()
         # Only download if the file is not already downloaded
         # Get the metadata of the remote file
-        response = httpx.head(url)
-        remote_file_size = int(response.headers.get("Content-Length"))
-        remote_file_modified = response.headers.get("Last-Modified")
-        write_database_fileinfo(response.headers)
-
-        # Get the size of the local file
-        file_size = os.path.getsize(DOWNLOAD_PATH)
-
-        logger.info(f"Remote file size    : {remote_file_size}")
-        logger.info(f"Local file size     : {file_size}")
-        logger.info(f"Remote file modified: {remote_file_modified}")
-        logger.info(f"Local file modified : {latest_record['Last-Modified']}")
-
-        if (
-            file_size == remote_file_size
-            and latest_record
-            and latest_record["Last-Modified"] == remote_file_modified
-        ):
-            logger.info(f"Existing File is up to date  {DOWNLOAD_PATH}")
+        headers = {"If-None-Match": latest_record.get("etag", "")}
+        response = httpx.head(url, headers=headers)
+        if response.status_code == 304:
+            logger.info("File is up to date")
             return False
 
-        # There must be a new file
         return True
 
 
