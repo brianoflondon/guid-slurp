@@ -66,11 +66,6 @@ def check_new_podcastindex_database() -> bool:
     """
     url = f"https://public.podcastindex.org/{DOWNLOAD_FILENAME}"
 
-    if not os.path.exists(DIRECTORY):
-        # Create the directory
-        os.makedirs(DIRECTORY)
-        logger.info("Directory created: ", DIRECTORY)
-
     if os.path.exists(DOWNLOAD_PATH):
         logger.info(f"File already downloaded {DOWNLOAD_PATH}")
         latest_record = check_database_fileinfo()
@@ -385,6 +380,11 @@ def fmt_time(seconds: int) -> str:
 
 def setup_logging():
     # Set the logging level
+    if not os.path.exists(DIRECTORY):
+        # Create the directory
+        os.makedirs(DIRECTORY)
+        logger.info("Directory created: ", DIRECTORY)
+
     logger.setLevel(logging.INFO)
 
     # Create a formatter
