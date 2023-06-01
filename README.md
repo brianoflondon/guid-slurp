@@ -3,6 +3,9 @@ A Podcasting 2.0 GUID to RSS feed URL resolver with distributed databases.
 
 v1.0.0
 
+[![Docker Build](https://img.shields.io/github/workflow/status/brianoflondon/guid-slurp/Build%20Docker%20Images?label=Docker%20Build&logo=docker)](https://github.com/brianoflondon/guid-slurp/actions/workflows/docker_publish.yml)
+
+
 
 ## Running with Docker (and scissors)
 
