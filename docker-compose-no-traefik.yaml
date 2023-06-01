@@ -2,7 +2,7 @@ version: '3'
 
 services:
   db-sync-gs:
-    # image: "brianoflondon/guid-slurp:develop"
+    image: "brianoflondon/guid-slurp:1.0.0"
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,9 +24,7 @@ services:
           max-size: "10m"
 
   api-gs:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: "brianoflondon/guid-slurp:1.0.0"
     command: [
       "gunicorn", "guid_slurp.main:app",
       "--proxy-protocol",
@@ -62,7 +60,7 @@ services:
     ports:
       # If you want to connect to the MongoDB from outside the Docker network
       # Uncomment the following line and change
-      - "${MONGODB_CONNECTION_IP}:27017"
+      # - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped
