@@ -19,7 +19,7 @@ from tqdm import tqdm
 from tqdm.utils import CallbackIOWrapper
 
 MONGODB_CONNECTION = "mongodb://10.0.0.11:27017"
-MONGODB_DATABASE = "podcastGuidUrlLocal"
+MONGODB_DATABASE = "podcastGuidUrl"
 MONGODB_COLLECTION = "guidUrl"
 MONGODB_DUPLICATES = "duplicateGuidUrl"
 
