@@ -1,0 +1,114 @@
+version: '3'
+
+services:
+  traefik-gs:
+    image: "traefik:latest"
+    container_name: "traefik-gs"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik:/etc/traefik
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-ssl-certs:/ssl-certs
+    networks:
+      - guid-slurp-traefik
+    env_file:
+      - .env
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+
+  db-sync-gs:
+    image: "brianoflondon/guid-slurp:1.0.0"
+    command: [
+      "python", "guid_slurp/database_sync.py"
+    ]
+    container_name: "db-sync-gs"
+    networks:
+      - guid-slurp-internal
+    env_file:
+      - .env
+    volumes:
+      - guid-slurp-data:/app/data
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+
+
+  api-gs:
+    image: "brianoflondon/guid-slurp:1.0.0"
+    command: [
+      "gunicorn", "guid_slurp.main:app",
+      "--proxy-protocol",
+      "--workers", "4",
+      "--worker-class", "uvicorn.workers.UvicornWorker",
+      "--bind", "0.0.0.0:80"
+    ]
+    container_name: "api-gs"
+    networks:
+      - guid-slurp-traefik
+      - guid-slurp-internal
+    env_file:
+      - .env
+    ports:
+      # This opens the API up to your local network. Set the Port to use
+      # in .env
+      - ${API_PORT}:80
+    volumes:
+      - guid-slurp-data:/app/data
+    labels:
+      # Enable Traefik for this specific "api" service
+      - traefik.enable=true
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+
+
+  mongodb:
+    container_name: mongodb-gs
+    hostname: mongodb
+    image: mongo:latest
+    env_file:
+      - ".env"
+    # If you want to connect to the MongoDB from outside the Docker network
+    # Uncomment the following lines and change
+    # ports:
+    #   - "${MONGODB_CONNECTION_IP}:27017"
+    volumes:
+      - mongodb-data:/data/db
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
+    networks:
+      - guid-slurp-internal
+
+
+networks:
+  guid-slurp-traefik:
+    driver: bridge
+  guid-slurp-internal:
+    driver: bridge
+
+
+volumes:
+  traefik-ssl-certs:
+    driver: local
+
+  mongodb-data:
+    driver: local
+
+  guid-slurp-data:
+    driver: local
