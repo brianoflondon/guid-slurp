@@ -12,7 +12,7 @@ from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
 
 from guid_slurp.mongo import check_connection
-from guid_slurp.startup import (
+from guid_slurp.database_sync import (
     MONGODB_COLLECTION,
     MONGODB_CONNECTION,
     MONGODB_DATABASE,

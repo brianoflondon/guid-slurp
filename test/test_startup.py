@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 from pymongo import DESCENDING
 
-from guid_slurp.startup import MONGODB_CONNECTION, check_database_fileinfo
+from guid_slurp.database_sync import MONGODB_CONNECTION, check_database_fileinfo
 
 
 @pytest.fixture(autouse=True)
