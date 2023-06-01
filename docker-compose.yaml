@@ -23,8 +23,7 @@ services:
           max-size: "10m"
 
   db-sync-gs:
-    build:
-      context: .
+    image: "brianoflondon/guid-slurp:1.0.0"
     command: [
       "python", "guid_slurp/database_sync.py"
     ]
@@ -44,7 +43,7 @@ services:
 
 
   api-gs:
-    # image: "guid-slurp:latest"
+    image: "brianoflondon/guid-slurp:1.0.0"
     build:
       context: .
     command: [
@@ -61,6 +60,8 @@ services:
     env_file:
       - .env
     ports:
+      # This opens the API up to your local network. Set the Port to use
+      # in .env
       - ${API_PORT}:80
     volumes:
       - guid-slurp-data:/app/data
@@ -81,9 +82,10 @@ services:
     image: mongo:latest
     env_file:
       - ".env"
-    ports:
-      - "127.0.1.1:27017:27017"
-      - "127.0.0.1:27017:27017"
+    # ports:
+      # If you want to connect to the MongoDB from outside the Docker network
+      # Uncomment the following line and change MONGODB_CONNECTION_IP in .env
+      # - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped

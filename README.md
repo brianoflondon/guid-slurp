@@ -1,5 +1,7 @@
 # guid-slurp
-A Podcasting 2.0 GUID to RSS feed URL resolver with distributed databases
+A Podcasting 2.0 GUID to RSS feed URL resolver with distributed databases.
+
+v1.0.0
 
 
 ## Running with Docker (and scissors)
@@ -16,6 +18,8 @@ git clone https://github.com/brianoflondon/guid-slurp.git
 cd guid-slurp
 ````
 
+#### Traefik On The Internet
+
 Now you need to edit the `.env.sample` file and rename it `.env`.
 
 Then run this if you wish to have a fully public API resolver (involving Traefik):
@@ -30,10 +34,19 @@ You can execute all these with this one command:
 git clone https://github.com/brianoflondon/guid-slurp.git && cd guid-slurp && docker-compose up --build -d
 ```
 
-Alternatively for a local version only:
+#### Local Only
+
+Alternatively for a local version only that doesn't run the reverse proxy. The API will be available on the machine you're running this from at the port specified in the `.env` file:
+
+`API_PORT=7777`
+
+If you want direct access to the MongoDB you can specify an IP and Port (or just a port). Instructions in the `.env.sample` file.
+
+
 ```bash
 docker compose -f docker-compose-no-traefik.yaml up --build -d
 ```
+
 
 
 If my calculations are correct, when you hit 88 MPH... oh, wait, no.
@@ -41,7 +54,7 @@ If my calculations are correct, when you hit 88 MPH... oh, wait, no.
 If everything is working properly, you can watch progress of startup with this:
 
 ```bash
-docker compose logs -f | grep -v "guid-slurp-mongodb"
+docker compose logs -f | grep -v "mongodb-gs"
 ```
 
 On first launch it will have to download the 1.4GB Database and then convert that into a smaller database.
