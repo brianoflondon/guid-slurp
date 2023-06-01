@@ -3,9 +3,6 @@ version: '3'
 services:
   db-sync-gs:
     image: "brianoflondon/guid-slurp:1.0.0"
-    build:
-      context: .
-      dockerfile: Dockerfile
     command: [
       "python", "guid_slurp/database_sync.py"
     ]

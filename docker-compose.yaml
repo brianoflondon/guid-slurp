@@ -44,8 +44,6 @@ services:
 
   api-gs:
     image: "brianoflondon/guid-slurp:1.0.0"
-    build:
-      context: .
     command: [
       "gunicorn", "guid_slurp.main:app",
       "--proxy-protocol",
