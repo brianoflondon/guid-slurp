@@ -210,6 +210,8 @@ async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=10000000000
     Resolve a PodcastIndex ID to a RSS feed URL.
     """
     logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
+    logging.info(f"MONGODB_DATABASE: {MONGODB_DATABASE}")
+    logging.info(f"MONGODB_COLLECTION: {MONGODB_COLLECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"podcastIndexId": podcastIndexId}, {"_id": 0})
