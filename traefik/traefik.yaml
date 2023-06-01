@@ -71,7 +71,7 @@ http:
     guid-resolver:
       loadBalancer:
         servers:
-          - url: "http://api:80"
+          - url: "http://api-gs:80"
 
 providers:
   docker:

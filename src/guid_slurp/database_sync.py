@@ -1,9 +1,12 @@
+import asyncio
 import csv
+import logging
 import os
 import sqlite3
+import sys
 import tarfile
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from time import mktime, strptime
 from timeit import default_timer as timer
 from typing import Any, List, Mapping, Sequence
@@ -16,7 +19,7 @@ from pymongo.mongo_client import MongoClient as MongoClientType
 from tqdm import tqdm
 from tqdm.utils import CallbackIOWrapper
 
-MONGODB_CONNECTION = "mongodb://127.0.0.1:27017"
+MONGODB_CONNECTION = "mongodb://10.0.0.11:27017"
 MONGODB_DATABASE = "podcastGuidUrl"
 MONGODB_COLLECTION = "guidUrl"
 MONGODB_DUPLICATES = "duplicateGuidUrl"
@@ -31,6 +34,9 @@ CSV_PATH = os.path.join(DIRECTORY, "podcasts.csv")
 
 COUNT_LINES = 0
 # Construct the path using os.path.join
+
+# Create a logger instance
+logger = logging.getLogger(__name__)
 
 
 def check_database_fileinfo() -> dict | None:
@@ -53,16 +59,19 @@ def write_database_fileinfo(headers: dict):
         )
 
 
-def fetch_podcastindex_database():
+def check_new_podcastindex_database() -> bool:
+    """
+    Check for a new database to download
+    """
     url = f"https://public.podcastindex.org/{DOWNLOAD_FILENAME}"
 
     if not os.path.exists(DIRECTORY):
         # Create the directory
         os.makedirs(DIRECTORY)
-        print("Directory created: ", DIRECTORY)
+        logger.info("Directory created: ", DIRECTORY)
 
     if os.path.exists(DOWNLOAD_PATH):
-        print(f"File already downloaded {DOWNLOAD_PATH}")
+        logger.info(f"File already downloaded {DOWNLOAD_PATH}")
         latest_record = check_database_fileinfo()
         # Only download if the file is not already downloaded
         # Get the metadata of the remote file
@@ -74,19 +83,24 @@ def fetch_podcastindex_database():
         # Get the size of the local file
         file_size = os.path.getsize(DOWNLOAD_PATH)
 
-        print(f"Remote file size    : {remote_file_size}")
-        print(f"Local file size     : {file_size}")
-        print(f"Remote file modified: {remote_file_modified}")
-        print(f"Local file modified : {latest_record['Last-Modified']}")
+        logger.info(f"Remote file size    : {remote_file_size}")
+        logger.info(f"Local file size     : {file_size}")
+        logger.info(f"Remote file modified: {remote_file_modified}")
+        logger.info(f"Local file modified : {latest_record['Last-Modified']}")
 
         if (
             file_size == remote_file_size
             and latest_record
             and latest_record["Last-Modified"] == remote_file_modified
         ):
-            print(f"Existing File is up to date  {DOWNLOAD_PATH}")
-            return
+            logger.info(f"Existing File is up to date  {DOWNLOAD_PATH}")
+            return False
 
+        # There must be a new file
+        return True
+
+
+def fetch_new_podcastindex_database():
     try:
         # Send a GET request to the URL and stream the response
         with httpx.stream("GET", url) as response:
@@ -121,30 +135,34 @@ def fetch_podcastindex_database():
             os.utime(DOWNLOAD_PATH, (web_modified_timestamp, web_modified_timestamp))
 
     except Exception as ex:
-        print("Error loading database")
-        print(ex)
+        logger.info("Error loading database")
+        logger.info(ex)
 
 
 def untar_file():
     # Open the tar.gz file
     CHUNK_SIZE = 1024 * 1024  # 1 MB
     if os.path.exists(UNTAR_PATH):
-        print(f"File already untarred {UNTAR_PATH}")
+        logger.info(f"File already untarred {UNTAR_PATH}")
         return
     with tarfile.open(DOWNLOAD_PATH, "r:gz") as tar:
         # Get the total number of members (files/directories) in the tar file
         # Extract each member in the tar file
-        print("Examining tarfile ...")
+        logger.info("Examining tarfile ...")
         for member in tar.getmembers():
             # Open a new file for writing
             if member.name == "./podcastindex_feeds.db":
-                print(f"Extracting file {member.name}")
+                logger.info(f"Extracting file {member.name}")
                 extracted_size = 0
                 with tar.extractfile(member) as source, open(
                     UNTAR_PATH, "wb"
                 ) as destination:
                     with tqdm(
-                        total=member.size, unit="B", unit_scale=True, unit_divisor=1024
+                        total=member.size,
+                        unit="B",
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        desc=f"Extracting: {member.name}",
                     ) as t:
                         fobj = CallbackIOWrapper(t.update, source, "read")
 
@@ -174,10 +192,10 @@ def decode_sql():
     COUNT_LINES = c.fetchone()[0]
 
     # Print the count
-    print("Number of rows:", COUNT_LINES)
+    logger.info("Number of rows:", COUNT_LINES)
 
     if os.path.exists(CSV_PATH):
-        print("CSV File already exists")
+        logger.info("CSV File already exists")
         return
     # Execute the query to select the fields from the table
     c.execute(
@@ -233,7 +251,7 @@ def create_duplicate_collection(client: MongoClient):
     # check if collection duplicatesGuid exists
     db = client[MONGODB_DATABASE]
     if MONGODB_DUPLICATES in db.list_collection_names():
-        print("Collection duplicatesGuid already exists")
+        logger.info("Collection duplicatesGuid already exists")
         return
     # Duplicates of GUID
     pipeline: Sequence[Mapping[str, Any]] = [
@@ -250,9 +268,9 @@ def create_duplicate_collection(client: MongoClient):
         {"$sort": {"count": -1}},
         {"$out": MONGODB_DUPLICATES},
     ]
-    print("Creating collection of duplicatesGuidUrl  .... slow operation")
+    logger.info("Creating collection of duplicatesGuidUrl  .... slow operation")
     db[MONGODB_COLLECTION].aggregate(pipeline)
-    print("🟢Created collection of duplicatesGuidUrl")
+    logger.info("🟢Created collection of duplicatesGuidUrl")
 
 
 class DuplicateRecord(BaseModel):
@@ -275,12 +293,12 @@ def process_duplicates(client: MongoClient):
     collection = db[MONGODB_DUPLICATES]
     cursor = collection.find({})
     unique_url_count = {}
-    print("Starting the process of duplicatesGuidUrl  .... slow operation")
+    logger.info("Starting the process of duplicatesGuidUrl  .... slow operation")
     for doc in cursor:
         record = Duplicates(**doc)
         all_urls = {urlparse(item.url).netloc for item in record.duplicates}
         all_podcastIds = {item.podcastIndexId for item in record.duplicates}
-        # print(f"Duplicates: {len(record.duplicates):>4} :  {len(all_urls)}")
+        # logger.info(f"Duplicates: {len(record.duplicates):>4} :  {len(all_urls)}")
         unique_url_count[record.podcastGuid] = len(all_urls)
         query = {"_id": str(record.podcastGuid)}
         update = {
@@ -291,7 +309,7 @@ def process_duplicates(client: MongoClient):
             }
         }
         collection.update_one(query, update)
-    print("🟢Finished the process of duplicatesGuidUrl  .... slow operation")
+    logger.info("🟢Finished the process of duplicatesGuidUrl  .... slow operation")
 
 
 def create_database():
@@ -306,7 +324,7 @@ def create_database():
         COUNT_LINES = c.fetchone()[0]
 
         # Print the count
-        print("Number of rows:", COUNT_LINES)
+        logger.info(f"Number of rows: {COUNT_LINES}")
 
         # Execute the query to select the fields from the table
         c.execute(
@@ -321,7 +339,7 @@ def create_database():
             collection = db[MONGODB_COLLECTION]
 
             if COUNT_LINES == collection.count_documents({}):
-                print("Database already created")
+                logger.info("Database already created")
                 return
 
             # Delete all data in the collection
@@ -371,18 +389,44 @@ def is_running_in_docker() -> bool:
     return os.path.exists("/.dockerenv")
 
 
-def startup_import():
+def fmt_time(seconds: int) -> str:
     """
-    Startup import
+    Format the time
     """
-    start = timer()
-    print("Starting import of PodcastIndex DB Dump ...")
+    seconds = round(seconds, 0)
+    return str(timedelta(seconds=seconds))
 
+
+def setup_logging():
+    # Set the logging level
+    logger.setLevel(logging.INFO)
+
+    # Create a formatter
+    formatter = logging.Formatter(
+        "%(asctime)s %(levelname)-8s %(module)-14s %(lineno) 5d : %(message)s"
+    )
+
+    # Create a handler for stdout (console)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    # Create a handler for the log file
+    log_file_path = os.path.join(DIRECTORY, "import.log")
+    file_handler = logging.FileHandler(log_file_path, mode="w")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+
+    # Add the handlers to the logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+
+def setup_paths():
     global MONGODB_CONNECTION, DIRECTORY, DOWNLOAD_FILENAME, DOWNLOAD_PATH
     global UNTAR_PATH, CSV_PATH
 
     if is_running_in_docker():
-        print("Running in Docker")
         MONGODB_CONNECTION = "mongodb://mongodb:27017/"
         DIRECTORY = os.path.join("data/", "podcastindex")
         DOWNLOAD_FILENAME = "podcastindex_feeds.db.tgz"
@@ -390,24 +434,73 @@ def startup_import():
         UNTAR_PATH = os.path.join(DIRECTORY, "podcastindex_feeds.db")
         CSV_PATH = os.path.join(DIRECTORY, "podcasts.csv")
 
-    print(f"MongoDB connection: {MONGODB_CONNECTION}")
+    setup_logging()
 
-    fetch_podcastindex_database()
-    print(f"Finished downloading database : {timer()-start:.3f} s")
+
+async def startup_import():
+    """
+    Startup import
+    """
+    start = timer()
+
+    global MONGODB_CONNECTION, DIRECTORY, DOWNLOAD_FILENAME, DOWNLOAD_PATH
+    global UNTAR_PATH, CSV_PATH
+
+    in_docker = False
+    if is_running_in_docker():
+        in_docker = True
+
+    logger.info("Starting import of PodcastIndex DB Dump ...")
+    logger.info(f"Running in docker: {in_docker}")
+
+    logger.info(f"MongoDB connection: {MONGODB_CONNECTION}")
+
+    if check_new_podcastindex_database():
+        fetch_new_podcastindex_database()
+
+    logger.info(
+        f"Finished downloading database                    : {fmt_time(timer()-start)}"
+    )
     untar_file()
-    print(f"Finished untar                : {timer()-start:.3f} s")
-    # decode_sql()
-    # print(f"Finished decode SQL          : {timer()-start:.3f} s")
+    logger.info(
+        f"Finished untar                                   : {fmt_time(timer()-start)}"
+    )
     create_database()
     # Remove the untarred file
     os.remove(UNTAR_PATH)
-    print(f"Finished database creation    : {timer()-start:.3f} s")
+    logger.info(
+        f"Finished database creation                       : {fmt_time(timer()-start)}"
+    )
     finish_database_import()
-    print(f"Finished database finalisation: {timer()-start:.3f} s")
+    logger.info(
+        f"Finished database finalisation                   : {fmt_time(timer()-start)}"
+    )
+
+
+async def keep_checking():
+    """
+    Keep checking for new database
+    """
+    repeat_check = 4 # hours
+    setup_paths()
+    while True:
+        try:
+            if check_new_podcastindex_database():
+                await startup_import()
+            logger.info(f"Sleeping for {repeat_check} hours")
+            await asyncio.sleep(60 * 60 * repeat_check)
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            logger.info("Exiting")
+            return
+        except Exception as e:
+            logger.error(e)
 
 
 if __name__ == "__main__":
     # with MongoClient(MONGODB_CONNECTION) as client:
     #     create_duplicate_collection(client)
     #     process_duplicates(client)
-    startup_import()
+    try:
+        asyncio.run(keep_checking())
+    except Exception as e:
+        logger.error(e)

@@ -1,50 +1,29 @@
 version: '3'
 
 services:
-  # traefik:
-  #   image: "traefik:latest"
-  #   container_name: "guid-slurp-traefik"
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./traefik:/etc/traefik
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - traefik-ssl-certs:/ssl-certs
-  #   networks:
-  #     - guid-slurp-traefik
-  #   env_file:
-  #     - .env
-  #   restart: unless-stopped
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #         max-file: "5"
-  #         max-size: "10m"
-
-  startup:
+  db-sync-gs:
     # image: "brianoflondon/guid-slurp:develop"
     build:
       context: .
       dockerfile: Dockerfile
     command: [
-      "python", "guid_slurp/startup.py"
+      "python", "guid_slurp/database_sync.py"
     ]
-    container_name: "guid-slurp-start"
+    container_name: "db-sync-gs"
     networks:
       - guid-slurp-internal
     env_file:
       - .env
     volumes:
       - guid-slurp-data:/app/data
-    restart: no
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
           max-file: "5"
           max-size: "10m"
 
-  api:
+  api-gs:
     build:
       context: .
       dockerfile: Dockerfile
@@ -55,7 +34,7 @@ services:
       "--worker-class", "uvicorn.workers.UvicornWorker",
       "--bind", "0.0.0.0:80"
     ]
-    container_name: "guid-slurp-api"
+    container_name: "api-gs"
     networks:
       - v4vapp-frontend-v2-traefik_traefik-public-p51
       - guid-slurp-traefik
@@ -77,17 +56,15 @@ services:
           max-size: "10m"
 
   mongodb:
-    container_name: guid-slurp-mongodb
+    container_name: mongodb-gs
     hostname: mongodb
     image: mongo:latest
     env_file:
       - ".env"
     ports:
-      # - "${LOCAL_TAILSCALE_IP}:27017:27017"
-      - "10.0.0.11:27027:27017"
-      - "127.0.1.1:27017:27017"
-      - "127.0.0.1:27017:27017"
-    # command: mongod --bind_ip localhost,${LOCAL_TAILSCALE_NAME} --replSet v4vapp-repl
+      # If you want to connect to the MongoDB from outside the Docker network
+      # Uncomment the following line and change
+      - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped

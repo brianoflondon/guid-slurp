@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from mongomock import MongoClient
 
 from guid_slurp.main import app  # Replace with your actual imports
-from guid_slurp.startup import MONGODB_COLLECTION, MONGODB_DATABASE
+from guid_slurp.database_sync import MONGODB_COLLECTION, MONGODB_DATABASE
 
 client = TestClient(app)
 

@@ -1,3 +1,5 @@
+import logging
+
 from pymongo import MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 
@@ -17,10 +19,10 @@ def check_connection(connection: str):
         # The ismaster command is cheap and does not require auth.
         client.admin.command("ismaster")
     except Exception as e:
-        print(f"Connection error: {str(e)}")
+        logging.info(f"Connection error: {str(e)}")
         return False
     else:
-        print("Connection successful.")
+        logging.info(f"Connection successful. {connection}")
         return True
     finally:
         client.close()

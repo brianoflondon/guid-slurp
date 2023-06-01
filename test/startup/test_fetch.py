@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from guid_slurp.startup import (  # Assuming the function is in yourmodule
+from guid_slurp.database_sync import (  # Assuming the function is in yourmodule
     DIRECTORY,
     DOWNLOAD_FILENAME,
     DOWNLOAD_PATH,

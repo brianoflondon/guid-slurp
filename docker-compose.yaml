@@ -1,9 +1,9 @@
 version: '3'
 
 services:
-  traefik:
+  traefik-gs:
     image: "traefik:latest"
-    container_name: "guid-slurp-traefik"
+    container_name: "traefik-gs"
     ports:
       - "80:80"
       - "443:443"
@@ -22,27 +22,28 @@ services:
           max-file: "5"
           max-size: "10m"
 
-  startup:
+  db-sync-gs:
     build:
       context: .
     command: [
-      "python", "guid_slurp/startup.py"
+      "python", "guid_slurp/database_sync.py"
     ]
-    container_name: "guid-slurp-start"
+    container_name: "db-sync-gs"
     networks:
       - guid-slurp-internal
     env_file:
       - .env
     volumes:
       - guid-slurp-data:/app/data
-    restart: no
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:
           max-file: "5"
           max-size: "10m"
 
-  api:
+
+  api-gs:
     # image: "guid-slurp:latest"
     build:
       context: .
@@ -53,7 +54,7 @@ services:
       "--worker-class", "uvicorn.workers.UvicornWorker",
       "--bind", "0.0.0.0:80"
     ]
-    container_name: "guid-slurp-api"
+    container_name: "api-gs"
     networks:
       - guid-slurp-traefik
       - guid-slurp-internal
@@ -75,7 +76,7 @@ services:
 
 
   mongodb:
-    container_name: guid-slurp-mongodb
+    container_name: mongodb-gs
     hostname: mongodb
     image: mongo:latest
     env_file:
