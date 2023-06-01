@@ -130,6 +130,7 @@ async def root(guid: UUID5 | str = "", url: HttpUrl | str = ""):
 
 
 def check_database_fileinfo() -> dict | None:
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         db = client[MONGODB_DATABASE]
         latest_record = db["fileInfo"].find_one(sort=[("timestamp", DESCENDING)])
@@ -161,6 +162,7 @@ async def resolve_guid(guid: UUID5 | str):
     """
     Resolve a GUID to a RSS feed URL.
     """
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"podcastGuid": str(guid)}, {"_id": 0})
@@ -175,6 +177,7 @@ async def resolve_url(url: HttpUrl):
     """
     Resolve a RSS feed URL to a GUID.
     """
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"url": url}, {"_id": 0})
@@ -191,6 +194,7 @@ async def resolve_itunesId(
     """
     Resolve an iTunes ID to a RSS feed URL.
     """
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"itunesId": itunesId}, {"_id": 0})
@@ -205,6 +209,7 @@ async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=10000000000
     """
     Resolve a PodcastIndex ID to a RSS feed URL.
     """
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
         cursor = collection.find({"podcastIndexId": podcastIndexId}, {"_id": 0})
@@ -239,6 +244,7 @@ async def duplicates(guid: str = Query("", description="GUID")):
         query = {"_id": str(guid)}
     else:
         query = {}
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_DUPLICATES]
         cursor = collection.find(query)

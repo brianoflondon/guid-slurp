@@ -13,7 +13,8 @@ def check_connection(connection: str):
     client = MongoClient(connection)  # type: MongoClientType
     try:
         # The ismaster command is cheap and does not require auth.
-        client.admin.command("ismaster")
+        answer = client.admin.command("ismaster")
+        logging.info(answer)
     except Exception as e:
         logging.info(f"Connection error: {str(e)}")
         return False
