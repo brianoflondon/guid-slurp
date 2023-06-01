@@ -19,7 +19,7 @@ from tqdm import tqdm
 from tqdm.utils import CallbackIOWrapper
 
 MONGODB_CONNECTION = "mongodb://10.0.0.11:27017"
-MONGODB_DATABASE = "podcastGuidUrl"
+MONGODB_DATABASE = "podcastGuidUrlLocal"
 MONGODB_COLLECTION = "guidUrl"
 MONGODB_DUPLICATES = "duplicateGuidUrl"
 
@@ -66,11 +66,6 @@ def check_new_podcastindex_database() -> bool:
     """
     url = f"https://public.podcastindex.org/{DOWNLOAD_FILENAME}"
 
-    if not os.path.exists(DIRECTORY):
-        # Create the directory
-        os.makedirs(DIRECTORY)
-        logger.info("Directory created: ", DIRECTORY)
-
     if os.path.exists(DOWNLOAD_PATH):
         logger.info(f"File already downloaded {DOWNLOAD_PATH}")
         latest_record = check_database_fileinfo()
@@ -82,7 +77,7 @@ def check_new_podcastindex_database() -> bool:
             logger.info("File is up to date")
             return False
 
-        return True
+    return True
 
 
 def fetch_new_podcastindex_database():
@@ -385,6 +380,11 @@ def fmt_time(seconds: int) -> str:
 
 def setup_logging():
     # Set the logging level
+    if not os.path.exists(DIRECTORY):
+        # Create the directory
+        os.makedirs(DIRECTORY)
+        logger.info("Directory created: ", DIRECTORY)
+
     logger.setLevel(logging.INFO)
 
     # Create a formatter
@@ -409,10 +409,12 @@ def setup_logging():
 
 
 def setup_paths():
-    global MONGODB_CONNECTION, DIRECTORY, DOWNLOAD_FILENAME, DOWNLOAD_PATH
+    global MONGODB_CONNECTION, DIRECTORY, DOWNLOAD_FILENAME
+    global DOWNLOAD_PATH, MONGODB_DATABASE
     global UNTAR_PATH, CSV_PATH
 
     if is_running_in_docker():
+        MONGODB_DATABASE = "podcastGuidUrl"
         MONGODB_CONNECTION = "mongodb://mongodb:27017/"
         DIRECTORY = os.path.join("data/", "podcastindex")
         DOWNLOAD_FILENAME = "podcastindex_feeds.db.tgz"

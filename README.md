@@ -41,7 +41,7 @@ git clone https://github.com/brianoflondon/guid-slurp.git && cd guid-slurp && do
 
 Alternatively for a local version only that doesn't run the reverse proxy. The API will be available on the machine you're running this from at the port specified in the `.env` file:
 
-`API_PORT=7777`
+`API_IP_PORT=7777`
 
 If you want direct access to the MongoDB you can specify an IP and Port (or just a port). Instructions in the `.env.sample` file.
 
