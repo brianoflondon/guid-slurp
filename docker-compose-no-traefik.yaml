@@ -2,7 +2,7 @@ version: '3'
 
 services:
   db-sync-gs:
-    image: "brianoflondon/guid-slurp:1.0.1"
+    image: "brianoflondon/guid-slurp:1.0.3"
     command: [
       "python", "guid_slurp/database_sync.py"
     ]
@@ -21,7 +21,7 @@ services:
           max-size: "10m"
 
   api-gs:
-    image: "brianoflondon/guid-slurp:1.0.1"
+    image: "brianoflondon/guid-slurp:1.0.3"
 
     command: [
       "gunicorn", "guid_slurp.main:app",
@@ -51,7 +51,7 @@ services:
 
   mongodb:
     container_name: mongodb-gs
-    hostname: mongodb
+    hostname: mongodb-gs
     image: mongo:latest
     env_file:
       - ".env"

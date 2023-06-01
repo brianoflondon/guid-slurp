@@ -108,9 +108,8 @@ async def startup_event() -> None:
     logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     if is_running_in_docker():
         logging.info("Running in Docker")
-        MONGODB_CONNECTION = "mongodb://mongodb:27017/"
+        MONGODB_CONNECTION = "mongodb://mongodb-gs:27017/"
     logging.info(f"MongoDB connection check: {check_connection(MONGODB_CONNECTION)}")
-
     logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
 
 
