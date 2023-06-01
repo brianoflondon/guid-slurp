@@ -62,8 +62,8 @@ services:
       - ".env"
     # If you want to connect to the MongoDB from outside the Docker network
     # Uncomment the following lines and change
-    # ports:
-    #   - "${MONGODB_CONNECTION_IP}:27017"
+    ports:
+      - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped
