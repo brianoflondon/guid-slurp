@@ -103,6 +103,7 @@ def check_new_podcastindex_database() -> bool:
 def fetch_new_podcastindex_database():
     try:
         # Send a GET request to the URL and stream the response
+        url = f"https://public.podcastindex.org/{DOWNLOAD_FILENAME}"
         with httpx.stream("GET", url) as response:
             # Get the total file size from the Content-Length header
             total_size = int(response.headers.get("Content-Length", 0))
@@ -481,7 +482,7 @@ async def keep_checking():
     """
     Keep checking for new database
     """
-    repeat_check = 4 # hours
+    repeat_check = 4  # hours
     setup_paths()
     while True:
         try:
