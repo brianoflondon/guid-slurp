@@ -14,11 +14,12 @@ from single_source import get_version
 from guid_slurp.mongo import check_connection
 from guid_slurp.database_sync import (
     MONGODB_COLLECTION,
-    MONGODB_CONNECTION,
     MONGODB_DATABASE,
     MONGODB_DUPLICATES,
     startup_import,
 )
+
+MONGODB_CONNECTION = os.getenv("MONGODB_CONNECTION", "mongodb://localhost:27017/")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,6 +78,7 @@ def get_cache_headers(max_age: int = 3600, reason: str = "") -> dict:
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = timer()
+    logging.info(f"MongoDB connection: {MONGODB_CONNECTION}")
     headers = request.headers
     response = await call_next(request)
     process_time = timer() - start_time

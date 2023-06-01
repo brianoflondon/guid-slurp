@@ -3,10 +3,6 @@ import logging
 from pymongo import MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 
-MONGODB_CONNECTION = "mongodb://localhost:27017"
-MONGODB_DATABASE = "podcastGuidUrl"
-MONGODB_COLLECTION = "guidUrl"
-
 
 def check_connection(connection: str):
     """
