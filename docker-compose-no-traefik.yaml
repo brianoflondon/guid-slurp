@@ -1,45 +1,19 @@
 version: '3'
 
 services:
-
-  startup:
+  db-sync-gs:
+    # image: "brianoflondon/guid-slurp:develop"
     build:
       context: .
+      dockerfile: Dockerfile
     command: [
-      "python", "guid_slurp/startup.py"
+      "python", "guid_slurp/database_sync.py"
     ]
-    container_name: "guid-slurp-start"
+    container_name: "db-sync-gs"
     networks:
       - guid-slurp-internal
     env_file:
       - .env
-    volumes:
-      - guid-slurp-data:/app/data
-    restart: no
-    logging:
-      driver: "json-file"
-      options:
-          max-file: "5"
-          max-size: "10m"
-
-  api:
-    build:
-      context: .
-    command: [
-      "gunicorn", "guid_slurp.main:app",
-      "--proxy-protocol",
-      "--workers", "4",
-      "--worker-class", "uvicorn.workers.UvicornWorker",
-      "--bind", "0.0.0.0:80"
-    ]
-    container_name: "guid-slurp-api"
-    networks:
-      - guid-slurp-traefik
-      - guid-slurp-internal
-    env_file:
-      - .env
-    ports:
-      - ${API_PORT}:80
     volumes:
       - guid-slurp-data:/app/data
     restart: unless-stopped
@@ -49,16 +23,46 @@ services:
           max-file: "5"
           max-size: "10m"
 
+  api-gs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: [
+      "gunicorn", "guid_slurp.main:app",
+      "--proxy-protocol",
+      "--workers", "4",
+      "--worker-class", "uvicorn.workers.UvicornWorker",
+      "--bind", "0.0.0.0:80"
+    ]
+    container_name: "api-gs"
+    networks:
+      - guid-slurp-internal
+    env_file:
+      - .env
+    ports:
+      - ${API_PORT}:80
+    volumes:
+      - guid-slurp-data:/app/data
+    labels:
+      # Enable Traefik for this specific "api" service
+      - traefik.enable=true
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-file: "5"
+          max-size: "10m"
 
   mongodb:
-    container_name: guid-slurp-mongodb
+    container_name: mongodb-gs
     hostname: mongodb
     image: mongo:latest
     env_file:
       - ".env"
     ports:
-      - "127.0.1.1:27017:27017"
-      - "127.0.0.1:27017:27017"
+      # If you want to connect to the MongoDB from outside the Docker network
+      # Uncomment the following line and change
+      - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped
@@ -72,11 +76,8 @@ services:
 
 
 networks:
-  guid-slurp-traefik:
-    driver: bridge
   guid-slurp-internal:
     driver: bridge
-
 
 volumes:
   traefik-ssl-certs:
