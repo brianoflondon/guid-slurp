@@ -4,10 +4,10 @@ import sys
 from datetime import UTC, datetime, timedelta
 from timeit import default_timer as timer
 
-from fastapi import FastAPI, HTTPException, Path, Query, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Path, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import UUID5, HttpUrl
-from pymongo import MongoClient
+from pymongo import DESCENDING, MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
 
@@ -17,7 +17,6 @@ from guid_slurp.startup import (
     MONGODB_CONNECTION,
     MONGODB_DATABASE,
     MONGODB_DUPLICATES,
-    check_database_fileinfo,
     startup_import,
 )
 
@@ -129,6 +128,13 @@ async def root(guid: UUID5 | str = "", url: HttpUrl | str = ""):
     raise HTTPException(status_code=404, detail="Item not found")
 
 
+def check_database_fileinfo() -> dict | None:
+    with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
+        db = client[MONGODB_DATABASE]
+        latest_record = db["fileInfo"].find_one(sort=[("timestamp", DESCENDING)])
+    return latest_record
+
+
 @app.get("/info/", tags=["info"])
 async def info():
     """
@@ -208,18 +214,18 @@ async def resolve_podcastIndexId(podcastIndexId: int = Path(gt=0, le=10000000000
 
 
 @app.get("/admin", tags=["admin"], include_in_schema=True)
-async def admin(request: Request):
+async def admin(request: Request, background_tasks: BackgroundTasks):
     """
     Admin page lists when the raw data was imported
     """
-    if not request.headers.get("X-secret") == "zz9pza":
-        with MongoClient(MONGODB_CONNECTION) as client:
+    if request.headers.get("X-secret") == os.getenv("ADMIN_HEADER_SECRET"):
+        with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
             collection = client[MONGODB_DATABASE]["fileInfo"]
             cursor = collection.find({}, {"_id": 0}).sort("timestamp", -1)
             results = [doc for doc in cursor]
             return results
-    startup_import()
-    return {"message": "Import Completed"}
+
+    return {"message": "not authorized"}
 
 
 @app.get("/duplicates/", tags=["problems"], include_in_schema=True)

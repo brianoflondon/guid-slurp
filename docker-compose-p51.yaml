@@ -1,27 +1,6 @@
 version: '3'
 
 services:
-  # traefik:
-  #   image: "traefik:latest"
-  #   container_name: "guid-slurp-traefik"
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./traefik:/etc/traefik
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - traefik-ssl-certs:/ssl-certs
-  #   networks:
-  #     - guid-slurp-traefik
-  #   env_file:
-  #     - .env
-  #   restart: unless-stopped
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #         max-file: "5"
-  #         max-size: "10m"
-
   startup:
     # image: "brianoflondon/guid-slurp:develop"
     build:
@@ -83,11 +62,9 @@ services:
     env_file:
       - ".env"
     ports:
-      # - "${LOCAL_TAILSCALE_IP}:27017:27017"
-      - "10.0.0.11:27027:27017"
-      - "127.0.1.1:27017:27017"
-      - "127.0.0.1:27017:27017"
-    # command: mongod --bind_ip localhost,${LOCAL_TAILSCALE_NAME} --replSet v4vapp-repl
+      # If you want to connect to the MongoDB from outside the Docker network
+      # Uncomment the following line and change
+      - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped

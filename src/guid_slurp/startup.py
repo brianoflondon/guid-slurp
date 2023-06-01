@@ -1,4 +1,6 @@
+import asyncio
 import csv
+import logging
 import os
 import sqlite3
 import tarfile
@@ -371,7 +373,7 @@ def is_running_in_docker() -> bool:
     return os.path.exists("/.dockerenv")
 
 
-def startup_import():
+async def startup_import():
     """
     Startup import
     """
@@ -410,4 +412,4 @@ if __name__ == "__main__":
     # with MongoClient(MONGODB_CONNECTION) as client:
     #     create_duplicate_collection(client)
     #     process_duplicates(client)
-    startup_import()
+    asyncio.run(startup_import())
