@@ -415,7 +415,7 @@ def setup_paths():
 
     if is_running_in_docker():
         MONGODB_DATABASE = "podcastGuidUrl"
-        MONGODB_CONNECTION = "mongodb://mongodb:27017/"
+        MONGODB_CONNECTION = "mongodb://mongodb-gs:27017/"
         DIRECTORY = os.path.join("data/", "podcastindex")
         DOWNLOAD_FILENAME = "podcastindex_feeds.db.tgz"
         DOWNLOAD_PATH = os.path.join(DIRECTORY, DOWNLOAD_FILENAME)

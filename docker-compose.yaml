@@ -23,7 +23,7 @@ services:
           max-size: "10m"
 
   db-sync-gs:
-    image: "brianoflondon/guid-slurp:1.0.1"
+    image: "brianoflondon/guid-slurp:1.0.2"
     command: [
       "python", "guid_slurp/database_sync.py"
     ]
@@ -43,7 +43,7 @@ services:
 
 
   api-gs:
-    image: "brianoflondon/guid-slurp:1.0.1"
+    image: "brianoflondon/guid-slurp:1.0.2"
     command: [
       "gunicorn", "guid_slurp.main:app",
       "--proxy-protocol",
@@ -76,7 +76,7 @@ services:
 
   mongodb:
     container_name: mongodb-gs
-    hostname: mongodb
+    hostname: mongodb-gs
     image: mongo:latest
     env_file:
       - ".env"
