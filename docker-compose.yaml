@@ -44,8 +44,6 @@ services:
 
   api-gs:
     image: "brianoflondon/guid-slurp:1.0.0"
-    build:
-      context: .
     command: [
       "gunicorn", "guid_slurp.main:app",
       "--proxy-protocol",
@@ -82,10 +80,10 @@ services:
     image: mongo:latest
     env_file:
       - ".env"
+    # If you want to connect to the MongoDB from outside the Docker network
+    # Uncomment the following lines and change
     # ports:
-      # If you want to connect to the MongoDB from outside the Docker network
-      # Uncomment the following line and change MONGODB_CONNECTION_IP in .env
-      # - "${MONGODB_CONNECTION_IP}:27017"
+    #   - "${MONGODB_CONNECTION_IP}:27017"
     volumes:
       - mongodb-data:/data/db
     restart: unless-stopped
