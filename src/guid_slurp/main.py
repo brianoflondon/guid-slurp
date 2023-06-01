@@ -17,6 +17,7 @@ from guid_slurp.startup import (
     MONGODB_CONNECTION,
     MONGODB_DATABASE,
     MONGODB_DUPLICATES,
+    check_database_fileinfo,
     startup_import,
 )
 
@@ -81,12 +82,13 @@ async def add_process_time_header(request: Request, call_next):
     response = await call_next(request)
     process_time = timer() - start_time
     response.headers["X-Process-Time"] = str(process_time)
-    logging.info(
-        f"{headers.get('cf-ipcountry')} IP: {headers.get('cf-connecting-ip')} "
-        f"Referer: {headers.get('referer')} "
-        f"Request: {request.url.path} query: {request.url.query} "
-        f"time: {process_time*1000:.3f}ms"
-    )
+    if not request.url.path == "/info/":
+        logging.info(
+            f"{headers.get('cf-ipcountry')} IP: {headers.get('cf-connecting-ip')} "
+            f"Referer: {headers.get('referer')} "
+            f"Request: {request.url.path} query: {request.url.query} "
+            f"time: {process_time*1000:.3f}ms"
+        )
     # new_headers = get_cache_headers(max_age=3600, reason="API")
     # # combine response.headers with the new_headers
     # response.headers.update(new_headers)
@@ -114,7 +116,7 @@ async def startup_event() -> None:
 
 
 @app.get("/", tags=["resolver"])
-async def root(guid: UUID5 | str = None, url: HttpUrl | str = None):
+async def root(guid: UUID5 | str = "", url: HttpUrl | str = ""):
     """
     Resolve a GUID or URL to a RSS feed URL. Will always
     resolve a GUID first if both are passed.
@@ -125,6 +127,26 @@ async def root(guid: UUID5 | str = None, url: HttpUrl | str = None):
         return await resolve_url(url)
 
     raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.get("/info/", tags=["info"])
+async def info():
+    """
+    Returns information about the API and checks that it is working
+    """
+    try:
+        file_info = check_database_fileinfo()
+        # delete the _id field
+        del file_info["_id"]
+    except Exception as e:
+        file_info = {"error": str(e)}
+    return {
+        "message": "Guid Slurp API",
+        "version": __version__,
+        "status": "OK",
+        "time": datetime.now(tz=UTC).isoformat(),
+        "file_info": file_info,
+    }
 
 
 @app.get("/guid/{guid}", tags=["resolver"])
