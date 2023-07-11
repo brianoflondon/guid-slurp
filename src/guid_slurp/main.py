@@ -16,7 +16,6 @@ from guid_slurp.database_sync import (
     MONGODB_CONNECTION,
     MONGODB_DATABASE,
     MONGODB_DUPLICATES,
-    startup_import,
 )
 from guid_slurp.mongo import check_connection
 
