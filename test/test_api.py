@@ -107,7 +107,7 @@ def test_resolve_url():
         # Invalid URL test
         response = client.get("/url/?url=not-a-valid-url")
         assert response.status_code == 422
-        assert response.json()["detail"][0]["type"] == "value_error.url.scheme"
+        assert response.json()["detail"][0]["type"] == "url_parsing"
 
         # Not found test
         mock_collection.delete_many({})  # No results found
@@ -135,7 +135,7 @@ def test_resolve_itunesId():
         # Invalid URL test
         response = client.get("/itunesId/not-a-valid-id")
         assert response.status_code == 422
-        assert response.json()["detail"][0]["type"] == "type_error.integer"
+        assert response.json()["detail"][0]["type"] == "int_parsing"
 
         # Not found test
         mock_collection.delete_many({})  # No results found

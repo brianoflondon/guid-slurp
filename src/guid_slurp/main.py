@@ -11,14 +11,13 @@ from pymongo import DESCENDING, MongoClient
 from pymongo.mongo_client import MongoClient as MongoClientType
 from single_source import get_version
 
-from guid_slurp.mongo import check_connection
 from guid_slurp.database_sync import (
     MONGODB_COLLECTION,
     MONGODB_CONNECTION,
     MONGODB_DATABASE,
     MONGODB_DUPLICATES,
-    startup_import,
 )
+from guid_slurp.mongo import check_connection
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +26,7 @@ logging.basicConfig(
 )
 logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
 
+EXTERNAL_API_DOMAIN = os.getenv("EXTERNAL_API_DOMAIN", "")
 
 __version__ = get_version(__name__, "", default_return="0.0.1")
 if __version__ is None:
@@ -151,6 +151,7 @@ async def info():
         "status": "OK",
         "time": datetime.now(tz=UTC).isoformat(),
         "file_info": file_info,
+        "server": EXTERNAL_API_DOMAIN,
     }
 
 
@@ -175,7 +176,7 @@ async def resolve_url(url: HttpUrl):
     """
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
-        cursor = collection.find({"url": url}, {"_id": 0})
+        cursor = collection.find({"url": str(url)}, {"_id": 0})
         results = [doc for doc in cursor]
     if results:
         return results

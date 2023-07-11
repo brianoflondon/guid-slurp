@@ -8,8 +8,8 @@ from guid_slurp.database_sync import (  # Assuming the function is in yourmodule
     DIRECTORY,
     DOWNLOAD_FILENAME,
     DOWNLOAD_PATH,
-    fetch_podcastindex_database,
 )
+
 
 @pytest.mark.skip(reason="Not implemented yet")
 @patch("os.path.exists")
