@@ -176,7 +176,7 @@ async def resolve_url(url: HttpUrl):
     """
     with MongoClient(MONGODB_CONNECTION) as client:  # type: MongoClientType
         collection = client[MONGODB_DATABASE][MONGODB_COLLECTION]
-        cursor = collection.find({"url": url}, {"_id": 0})
+        cursor = collection.find({"url": str(url)}, {"_id": 0})
         results = [doc for doc in cursor]
     if results:
         return results
