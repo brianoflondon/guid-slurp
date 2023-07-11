@@ -23,7 +23,7 @@ services:
           max-size: "10m"
 
   db-sync-gs:
-    image: "brianoflondon/guid-slurp:1.0.3"
+    image: "brianoflondon/guid-slurp:latest"
     command: [
       "python", "guid_slurp/database_sync.py"
     ]
@@ -43,7 +43,7 @@ services:
 
 
   api-gs:
-    image: "brianoflondon/guid-slurp:1.0.3"
+    image: "brianoflondon/guid-slurp:latest"
     command: [
       "gunicorn", "guid_slurp.main:app",
       "--proxy-protocol",
