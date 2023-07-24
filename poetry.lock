@@ -79,18 +79,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "bump-pydantic"
-version = "0.3.0"
+version = "0.6.0"
 description = "Convert Pydantic from V1 to V2 ♻"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "bump_pydantic-0.3.0-py3-none-any.whl", hash = "sha256:28470cdeb90b5476e5bc259e6551bfc1100d967c4705797248f36fee0b50412f"},
-    {file = "bump_pydantic-0.3.0.tar.gz", hash = "sha256:ac9c585b31e11d8b47a5e5ccf66d48a125581010987bde17114c23f6c3f95e95"},
+    {file = "bump_pydantic-0.6.0-py3-none-any.whl", hash = "sha256:a430f171eb39ce355e277c7aded67ac427cadd42c5c025ad5519cfff25a73abc"},
+    {file = "bump_pydantic-0.6.0.tar.gz", hash = "sha256:33149329dd81b2868c84be835b072b3ee0199cb4d564736585ca73fb108dc4bd"},
 ]
 
 [package.dependencies]
 libcst = "*"
-mypy = "*"
 rich = "*"
 typer = ">=0.7.0"
 typing-extensions = "*"
@@ -1069,4 +1068,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "b4d7f36285f4bb620ed8c7e7f4b1240fce47f88611f8f247d68e31b0ec41437f"
+content-hash = "8e54bae7aaf74e002315e8fb368d7591fed7d24e6b8d145fc9a0470f54aa0efd"
