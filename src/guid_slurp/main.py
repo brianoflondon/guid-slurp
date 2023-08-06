@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from timeit import default_timer as timer
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Path, Query, Request
+from fastapi import __version__ as fastapi_version
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import UUID5, HttpUrl
 from pymongo import DESCENDING, MongoClient
@@ -34,7 +35,9 @@ if __version__ is None:
 
 app = FastAPI(
     title="Guid Slurp API",
-    description="API for resolving Podcasting 2.0 GUIDs and RSS feed URLs.",
+    description=f"""API for resolving Podcasting 2.0 GUIDs and RSS feed URLs.\n
+    FastAPI Version: {fastapi_version}
+    """,
     version=__version__,
     debug=False,
     # terms_of_service="http://example.com/terms/",
