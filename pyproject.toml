@@ -11,7 +11,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-tqdm = "^4.65.0"
+tqdm = "^4.66.1"
 httpx = "^0.24.1"
 pymongo = "^4.4.1"
 pytz = "^2023.3"
