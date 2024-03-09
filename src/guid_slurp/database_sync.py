@@ -481,6 +481,7 @@ async def keep_checking():
             logger.info("Exiting")
             return
         except Exception as e:
+            logger.exception(e)
             logger.error(e)
 
 
@@ -492,3 +493,11 @@ if __name__ == "__main__":
         asyncio.run(keep_checking())
     except Exception as e:
         logger.error(e)
+
+
+# 2024-03-03 07:16:01,453 INFO     database_sync     70 : File already downloaded data/podcastindex/podcastindex_feeds.db.tgz
+# Downloading: podcastindex_feeds.db.tgz: 100%|██████████| 1.39G/1.39G [01:02<00:00, 24.1MB/s]
+# 2024-03-03 07:17:04,547 INFO     database_sync    449 : Finished downloading database                    : 0:01:03
+# 2024-03-03 07:17:04,549 INFO     database_sync    127 : File already untarred data/podcastindex/podcastindex_feeds.db
+# 2024-03-03 07:17:04,549 INFO     database_sync    453 : Finished untar                                   : 0:01:03
+# 2024-03-03 07:17:04,570 ERROR    database_sync    484 : database disk image is malformed
