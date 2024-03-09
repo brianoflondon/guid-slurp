@@ -72,10 +72,15 @@ def check_new_podcastindex_database() -> bool:
         # Only download if the file is not already downloaded
         # Get the metadata of the remote file
         headers = {"If-None-Match": latest_record.get("etag", "")}
-        response = httpx.head(url, headers=headers)
-        if response.status_code == 304:
-            logger.info("File is up to date")
-            return False
+        try:
+            response = httpx.head(url, headers=headers)
+            if response.status_code == 304:
+                logger.info("File is up to date")
+                return False
+        except Exception as ex:
+            logger.error("Problem checking headers on pocastindex.org")
+            logging.exception(ex)
+            return True
 
     return True
 

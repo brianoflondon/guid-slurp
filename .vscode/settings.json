@@ -1,13 +1,12 @@
 {
     "workbench.colorCustomizations": {
-        "activityBar.background": "#312C2D",
-        "titleBar.activeBackground": "#453E3F",
-        "titleBar.activeForeground": "#FAFAFA"
+        "activityBar.background": "#4A2217",
+        "titleBar.activeBackground": "#682F21",
+        "titleBar.activeForeground": "#FDF9F8"
     },
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
-    "python.formatting.provider": "none",
     "python.testing.pytestArgs": [
         "."
     ],
